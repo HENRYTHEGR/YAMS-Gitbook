@@ -18,6 +18,10 @@ Team 4967 has made this excellent white paper describing exactly how Chinese Rem
 ## Warnings
 
 {% hint style="danger" %}
+`EasyCRT` offsets are unlike the rest of YAMS and YAGSL for 2026. they expect to be given negative values to set offsets. This will be changed next season!
+{% endhint %}
+
+{% hint style="danger" %}
 ## Debugging a read failure by 2181
 
 Your defined range will affect your reading.
