@@ -29,11 +29,30 @@ Cascading elevator **Mechanism** gearings should be divided by the stages in the
 
 An easy way to do this with YAMS is by using `GearBox.fromReductionStages`and `Sprocket.fromStages`!
 
+## Previous Configurations
+
+YAMS does its best to prevent simple mistakes from turning into big headaches, so it will reset your previous smart motor controller configuration from other runs by default. You can configure this behavior with
+
+```java
+SmartMotorController config = new SmartMotorControllerConfig() //...
+                                .withResetPreviousConfig(false);
+```
+
 ## Power optimization is crucial to prevent brownouts
 
 Power optimization can be done with [supply, and stator current limits, ramp rates](limiting-power-consumption.md), and adequately geared gearboxes and motors.
 
 ## Tuning our closed loop controllers
+
+{% hint style="info" %}
+## Motion Profiles
+
+The rule of thumb is:
+
+1. Use trapezoid profile if your DC motor is always current-limited or you’re doing torque control
+2. Use exponential profile if your DC motor is never current-limited
+3. Use [the algorithm in this whitepaper](https://www.chiefdelphi.com/t/whitepaper-trapezoidal-exponential-motion-profiling/443468/12?u=nstrike) if you’re sometimes current-limited (not implemented in YAMS, yet)
+{% endhint %}
 
 All SmartMotorControllers in YAMS support motion profiled PID's and feedforwards so you should have no limitation on your ability to tune your mechanism! Keep in mind that you can set [separate PID and Feedforward values for simulation only](simulation-only-pid-+-feedforward.md) since simulation will never exactly match real life.
 
