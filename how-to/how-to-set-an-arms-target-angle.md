@@ -93,8 +93,9 @@ public class ExampleSubsystem extends SubsystemBase {
 <strong>  /**
 </strong><strong>   * Set the angle of the arm, stops when reached.
 </strong><strong>   * @param angle Angle to go to.
+</strong><strong>   * @param tolerance Angle tolerance for completion.
 </strong><strong>   */
-</strong><strong>  public Command setAngle(Angle angle) { return arm.runTo(angle);}
+</strong><strong>  public Command setAngleAndStop(Angle angle, Angle tolerance) { return arm.runTo(angle, tolerance);}
 </strong>  
 <strong>  /**
 </strong><strong>   * Set the angle of the arm.

@@ -538,10 +538,10 @@ public class RobotContainer {
 
   private void configureBindings() {
     // Commands work identically on real robot and in simulation
-    controller.a().onTrue(arm.setAngle(0.25));
-    controller.b().onTrue(arm.setAngle(-0.25));
-    controller.x().onTrue(elevator.setHeight(1.0));
-    controller.y().onTrue(shooter.spinUp(80)); // 80 rot/s
+    controller.a().whileTrue(arm.setAngle(Rotations.of(0.25)));
+    controller.b().whileTrue(arm.setAngle(Rotations.of(-0.25)));
+    controller.x().whileTrue(elevator.setHeight(Meters.of(1.0)));
+    controller.y().whileTrue(shooter.setSpeed(RotationsPerSecond.of(80)));
   }
 }
 ```

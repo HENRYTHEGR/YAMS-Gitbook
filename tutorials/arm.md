@@ -589,15 +589,16 @@ public class ExampleSubsystem extends SubsystemBase {
 <strong>  /**
 </strong><strong>   * Set the angle of the arm, ends the command but does not stop the arm when the arm reaches the setpoint.
 </strong><strong>   * @param angle Angle to go to.
+</strong><strong>   * @param tolerance Angle tolerance for completion.
 </strong><strong>   * @return A Command
 </strong><strong>   */
-</strong><strong>  public Command setAngleAndStop(Angle angle) { return arm.runTo(angle);}
+</strong><strong>  public Command setAngleAndStop(Angle angle, Angle tolerance) { return arm.runTo(angle, tolerance);}
 </strong>  
 <strong>  /**
 </strong><strong>   * Set arm closed loop controller to go to the specified mechanism position.
 </strong><strong>   * @param angle Angle to go to.
 </strong><strong>   */
-</strong><strong>  public void setAngleSetpoint(Angle angle) { arm.setMechanismPosition(angle); }
+</strong><strong>  public void setAngleSetpoint(Angle angle) { arm.setMechanismPositionSetpoint(angle); }
 </strong>
 <strong>  /**
 </strong><strong>   * Move the arm up and down.

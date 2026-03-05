@@ -72,10 +72,11 @@ Use `runTo()` when you want the command to **end automatically** when the mechan
 /**
  * Set the height of the elevator. Command ends when goal is reached.
  * @param height Target height
+ * @param tolerance Distance tolerance for completion
  * @return A Command that ends when at setpoint
  */
-public Command setHeightAndStop(Distance height) { 
-  return elevator.runTo(height);
+public Command setHeightAndStop(Distance height, Distance tolerance) { 
+  return elevator.runTo(height, tolerance);
 }
 ```
 
@@ -86,7 +87,7 @@ public Command setHeightAndStop(Distance height) {
 - **One-shot movements** - press button once to go to a preset
 
 {% hint style="warning" %}
-**Important**: `runTo()` checks `isAtGoal()` using the tolerance configured in your `SmartMotorControllerConfig.withClosedLoopTolerance()`. Make sure this tolerance is reasonable for your mechanism.
+**Important**: `runTo()` requires a tolerance parameter to determine when the goal is reached. Choose a tolerance appropriate for your mechanism (e.g., `Centimeters.of(2)` for an elevator, `Degrees.of(1)` for an arm).
 {% endhint %}
 
 ### Example: Autonomous Sequence
@@ -96,15 +97,15 @@ public Command setHeightAndStop(Distance height) {
 public Command autoScoreHigh() {
   return Commands.sequence(
     // Move elevator to scoring position (ends when reached)
-    m_elevator.setHeightAndStop(Meters.of(1.2)),
+    m_elevator.setHeightAndStop(Meters.of(1.2), Centimeters.of(2)),
     // Extend arm (ends when reached)
-    m_arm.setAngleAndStop(Degrees.of(45)),
+    m_arm.setAngleAndStop(Degrees.of(45), Degrees.of(1)),
     // Score the game piece
     m_intake.outtake().withTimeout(0.5),
     // Retract arm (ends when reached)
-    m_arm.setAngleAndStop(Degrees.of(0)),
+    m_arm.setAngleAndStop(Degrees.of(0), Degrees.of(1)),
     // Lower elevator (ends when reached)
-    m_elevator.setHeightAndStop(Meters.of(0))
+    m_elevator.setHeightAndStop(Meters.of(0), Centimeters.of(2))
   );
 }
 ```
@@ -235,8 +236,8 @@ This is intentional! It allows for smooth transitions between commands without t
 If you actually want to stop motor output when a command ends, use `finallyDo()`:
 
 ```java
-public Command setHeightAndStopMotor(Distance height) {
-  return elevator.runTo(height)
+public Command setHeightAndStopMotor(Distance height, Distance tolerance) {
+  return elevator.runTo(height, tolerance)
     .finallyDo(() -> motor.stopMotor()); // Actually stops the motor
 }
 ```
@@ -259,22 +260,22 @@ public Command stop() {
 ```java
 public Command autoRoutine() {
   return Commands.sequence(
-    // Step 1: Position the arm
-    m_arm.setAngleAndStop(Degrees.of(45)),
+    // Step 1: Position the arm (runTo ends when reached)
+    m_arm.setAngleAndStop(Degrees.of(45), Degrees.of(1)),
     
     // Step 2: Start shooter (run() because we want it to keep running)
-    m_shooter.setVelocity(RPM.of(4000)),
+    m_shooter.setSpeed(RPM.of(4000)),
     
     // Step 3: Wait for shooter to spin up
-    Commands.waitUntil(m_shooter::isAtSpeed),
+    Commands.waitUntil(() -> m_shooter.isNear(RPM.of(4000), RPM.of(100))),
     
     // Step 4: Feed the game piece
     m_feeder.feedForward().withTimeout(0.5),
     
     // Step 5: Stop shooter and return arm
     Commands.parallel(
-      m_shooter.stop(),
-      m_arm.setAngleAndStop(Degrees.of(0))
+      m_shooter.setVoltage(Volts.of(0)),  // Stop the shooter
+      m_arm.setAngleAndStop(Degrees.of(0), Degrees.of(1))
     )
   );
 }

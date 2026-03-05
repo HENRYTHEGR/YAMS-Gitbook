@@ -590,10 +590,11 @@ public class ExampleSubsystem extends SubsystemBase {
 </strong>  
 <strong>  /**
 </strong><strong>   * Set the height of the elevator and ends the command when reached, but not the closed loop controller.
-</strong><strong>   * @param angle Distance to go to.
+</strong><strong>   * @param height Distance to go to.
+</strong><strong>   * @param tolerance Distance tolerance for completion.
 </strong><strong>   * @return A Command
 </strong><strong>   */
-</strong><strong>  public Command setHeightAndStop(Distance height) { return elevator.runTo(height);}
+</strong><strong>  public Command setHeightAndStop(Distance height, Distance tolerance) { return elevator.runTo(height, tolerance);}
 </strong>  
 <strong>  /**
 </strong><strong>   * Set the elevators closed loop controller setpoint.

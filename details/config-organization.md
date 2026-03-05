@@ -136,7 +136,7 @@ public class ArmSubsystem extends SubsystemBase {
   
   // Commands and business logic only - no config clutter!
   public Command goToAngle(Angle target) {
-    return arm.runTo(target);
+    return arm.runTo(target, Degrees.of(1));  // tolerance required
   }
 }
 ```
@@ -284,7 +284,7 @@ public class ArmSubsystem extends SubsystemBase {
   // ==================== COMMANDS ====================
   
   public Command runToAngle(Angle target) {
-    return arm.runTo(target);
+    return arm.runTo(target, Degrees.of(1));  // tolerance required
   }
 
   public Command holdAngle(Angle target) {
@@ -292,7 +292,7 @@ public class ArmSubsystem extends SubsystemBase {
   }
 
   public Command stow() {
-    return arm.runTo(Rotations.of(0));
+    return arm.runTo(Rotations.of(0), Degrees.of(1));  // tolerance required
   }
 
   // ==================== ACCESSORS ====================
