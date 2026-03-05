@@ -408,6 +408,20 @@ controller.a().whileTrue(
 );
 ```
 
+{% hint style="warning" %}
+**Why the delay between tests matters**
+
+When a test completes, the mechanism still has momentum (kinetic energy) from the previous motion. If you immediately start a test in the opposite direction, the motor must first counteract this residual momentum before the new test's motion begins. This "fighting against itself" period produces misleading data that can skew your feedforward constants.
+
+For example, if a flywheel is spinning at high speed after a dynamic forward test and you immediately run dynamic reverse, the initial voltage readings will include the energy spent decelerating the flywheel - not just accelerating it in the new direction.
+
+**Recommendations:**
+- Use at least **1-2 seconds** of delay between tests for most mechanisms
+- For high-inertia mechanisms (heavy arms, large flywheels), use **3+ seconds** or wait until the mechanism has fully stopped
+- Consider adding a `stopMotor` call between tests to actively brake the mechanism
+- If running tests manually with separate button bindings, wait for the mechanism to settle before starting the next test
+{% endhint %}
+
 For mechanisms with limits (arms, elevators), you can add safety stops:
 
 ```java
