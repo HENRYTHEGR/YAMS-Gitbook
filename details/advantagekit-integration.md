@@ -184,46 +184,50 @@ package frc.robot.subsystems.akit;
 import static edu.wpi.first.units.Units.*;
 
 import com.ctre.phoenix6.hardware.TalonFX;
+import edu.wpi.first.math.controller.ArmFeedforward;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import yams.gearing.GearBox;
 import yams.gearing.MechanismGearing;
-import yams.mechanisms.config.SmartMotorControllerConfig;
-import yams.mechanisms.config.SmartMotorControllerConfig.ControlMode;
-import yams.mechanisms.config.SmartMotorControllerConfig.MotorMode;
+import yams.mechanisms.positional.Arm;
 import yams.motorcontrollers.SmartMotorController;
-import yams.motorcontrollers.remote.TalonFXWrapper;
 
 /**
  * Single IO implementation for the arm - works in BOTH real and simulation!
- * YAMS handles simulation automatically via passive simulation in SmartMotorController.
+ * Uses YAMS Arm mechanism class while pulling telemetry from the underlying SmartMotorController.
  */
 public class ArmIOTalonFX implements ArmIO {
 
+  private final Arm arm;
   private final SmartMotorController motor;
 
   public ArmIOTalonFX(SubsystemBase subsystem, int canId) {
-    SmartMotorControllerConfig config = new SmartMotorControllerConfig(subsystem)
-        .withControlMode(ControlMode.CLOSED_LOOP)
-        .withIdleMode(MotorMode.BRAKE)
-        .withGearing(new MechanismGearing(GearBox.fromReductionStages(5, 4, 3)))
-        .withMomentOfInertia(Inches.of(18), Pounds.of(5))  // Used for simulation physics!
-        .withClosedLoopController(5, 0, 0.1)
-        .withFeedforward(new ArmFeedforward(0.1, 0.3, 0.5, 0.01))
-        .withTrapezoidalProfile(1.0, 2.0) // rot/s, rot/s²
-        .withClosedLoopTolerance(Rotations.of(0.01))
-        .withSoftLimits(Rotations.of(-0.25), Rotations.of(0.25))
-        .withTelemetry("Arm", SmartMotorControllerConfig.TelemetryVerbosity.HIGH);
-
-    // TalonFXWrapper works on real robot AND in simulation!
-    // In sim, it uses the DCMotor, gearing, and MOI to simulate physics
     TalonFX talonFX = new TalonFX(canId);
-    this.motor = new TalonFXWrapper(talonFX, DCMotor.getKrakenX60(1), config);
+    
+    // Create Arm mechanism - handles simulation automatically!
+    this.arm = new Arm(
+        subsystem,
+        talonFX,
+        DCMotor.getKrakenX60(1),
+        new MechanismGearing(GearBox.fromReductionStages(5, 4, 3)),
+        Inches.of(18),   // Arm length - used for simulation physics
+        Pounds.of(5)     // Arm mass - used for simulation physics
+    );
+    
+    arm.withClosedLoopController(5, 0, 0.1)
+       .withFeedforward(new ArmFeedforward(0.1, 0.3, 0.5, 0.01))
+       .withTrapezoidalProfile(1.0, 2.0) // rot/s, rot/s²
+       .withClosedLoopTolerance(Rotations.of(0.01))
+       .withSoftLimits(Rotations.of(-0.25), Rotations.of(0.25))
+       .withTelemetry("Arm");
+    
+    // Get reference to underlying SmartMotorController for telemetry
+    this.motor = arm.getSmartMotorController();
   }
 
   @Override
   public void updateInputs(ArmIOInputs inputs) {
-    // These return real values on robot, simulated values in sim
+    // Pull telemetry data from the underlying SmartMotorController
     inputs.positionRotations = motor.getMechanismPosition().in(Rotations);
     inputs.velocityRotationsPerSec = motor.getMechanismVelocity().in(RotationsPerSecond);
     inputs.appliedVolts = motor.getVoltage().in(Volts);
@@ -236,12 +240,18 @@ public class ArmIOTalonFX implements ArmIO {
 
   @Override
   public void setTargetAngle(double rotations) {
-    motor.setPosition(Rotations.of(rotations));
+    // Use the Mechanism class method for setting position
+    arm.setMechanismPositionSetpoint(Rotations.of(rotations));
   }
 
   @Override
   public void stop() {
-    motor.setVoltage(Volts.of(0));
+    arm.setMechanismVoltageSetpoint(Volts.of(0));
+  }
+  
+  /** Access the Arm mechanism for command helpers like run() and runTo() */
+  public Arm getArm() {
+    return arm;
   }
 }
 ```
@@ -254,66 +264,78 @@ package frc.robot.subsystems.akit;
 import static edu.wpi.first.units.Units.*;
 
 import com.ctre.phoenix6.hardware.TalonFX;
+import edu.wpi.first.math.controller.ElevatorFeedforward;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import yams.gearing.GearBox;
 import yams.gearing.MechanismGearing;
-import yams.mechanisms.config.SmartMotorControllerConfig;
-import yams.mechanisms.config.SmartMotorControllerConfig.ControlMode;
-import yams.mechanisms.config.SmartMotorControllerConfig.MotorMode;
+import yams.mechanisms.positional.Elevator;
 import yams.motorcontrollers.SmartMotorController;
-import yams.motorcontrollers.remote.TalonFXWrapper;
 
 /**
- * Single IO implementation - passive simulation handles sim mode automatically!
+ * Single IO implementation - uses YAMS Elevator mechanism with SmartMotorController telemetry.
  */
 public class ElevatorIOTalonFX implements ElevatorIO {
 
+  private final Elevator elevator;
   private final SmartMotorController motor;
 
   public ElevatorIOTalonFX(SubsystemBase subsystem, int canId) {
-    SmartMotorControllerConfig config = new SmartMotorControllerConfig(subsystem)
-        .withControlMode(ControlMode.CLOSED_LOOP)
-        .withIdleMode(MotorMode.BRAKE)
-        .withGearing(new MechanismGearing(GearBox.fromReductionStages(5, 4)))
-        .withCircumference(Inches.of(1.5 * Math.PI)) // Pulley circumference
-        .withCarriageMass(Pounds.of(10))  // Used for simulation physics!
-        .withClosedLoopController(10, 0, 0.5)
-        .withFeedforward(new ElevatorFeedforward(0.1, 0.2, 0.5, 0.01))
-        .withTrapezoidalProfile(1.0, 2.0) // m/s, m/s²
-        .withClosedLoopTolerance(Meters.of(0.01))
-        .withSoftLimits(Meters.of(0), Meters.of(1.2))
-        .withTelemetry("Elevator", SmartMotorControllerConfig.TelemetryVerbosity.HIGH);
-
     TalonFX talonFX = new TalonFX(canId);
-    this.motor = new TalonFXWrapper(talonFX, DCMotor.getKrakenX60(1), config);
+    
+    // Create Elevator mechanism - handles simulation automatically!
+    this.elevator = new Elevator(
+        subsystem,
+        talonFX,
+        DCMotor.getKrakenX60(1),
+        new MechanismGearing(GearBox.fromReductionStages(5, 4)),
+        Inches.of(1.5 * Math.PI),  // Pulley circumference
+        Pounds.of(10)              // Carriage mass - used for simulation physics
+    );
+    
+    elevator.withClosedLoopController(10, 0, 0.5)
+            .withFeedforward(new ElevatorFeedforward(0.1, 0.2, 0.5, 0.01))
+            .withTrapezoidalProfile(1.0, 2.0) // m/s, m/s²
+            .withClosedLoopTolerance(Meters.of(0.01))
+            .withSoftLimits(Meters.of(0), Meters.of(1.2))
+            .withTelemetry("Elevator");
+    
+    // Get reference to underlying SmartMotorController for telemetry
+    this.motor = elevator.getSmartMotorController();
   }
 
   @Override
   public void updateInputs(ElevatorIOInputs inputs) {
+    // Pull telemetry data from the underlying SmartMotorController
     inputs.positionMeters = motor.getMeasurementPosition().in(Meters);
     inputs.velocityMetersPerSec = motor.getMeasurementVelocity().in(MetersPerSecond);
     inputs.appliedVolts = motor.getVoltage().in(Volts);
     inputs.supplyCurrentAmps = motor.getSupplyCurrent().map(c -> c.in(Amps)).orElse(0.0);
     inputs.statorCurrentAmps = motor.getStatorCurrent().in(Amps);
     inputs.temperatureCelsius = motor.getTemperature().in(Celsius);
-    inputs.targetPositionMeters = motor.getMechanismPositionSetpoint()
-        .map(a -> motor.getConfig().convertFromMechanism(a).in(Meters)).orElse(0.0);
+    inputs.targetPositionMeters = motor.getMeasurementPositionSetpoint()
+        .map(d -> d.in(Meters)).orElse(0.0);
   }
 
   @Override
   public void setTargetHeight(double meters) {
-    motor.setPosition(Meters.of(meters));
+    // Use the Mechanism class method for setting position
+    elevator.setMeasurementPositionSetpoint(Meters.of(meters));
   }
 
   @Override
   public void stop() {
-    motor.setVoltage(Volts.of(0));
+    elevator.setMechanismVoltageSetpoint(Volts.of(0));
+  }
+  
+  /** Access the Elevator mechanism for command helpers like run() and runTo() */
+  public Elevator getElevator() {
+    return elevator;
   }
 }
 ```
 
-### Shooter IO Implementation (Works for Real and Sim!)
+### Shooter (FlyWheel) IO Implementation (Works for Real and Sim!)
 
 ```java
 package frc.robot.subsystems.akit;
@@ -321,40 +343,47 @@ package frc.robot.subsystems.akit;
 import static edu.wpi.first.units.Units.*;
 
 import com.ctre.phoenix6.hardware.TalonFX;
+import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import yams.gearing.GearBox;
 import yams.gearing.MechanismGearing;
-import yams.mechanisms.config.SmartMotorControllerConfig;
-import yams.mechanisms.config.SmartMotorControllerConfig.ControlMode;
-import yams.mechanisms.config.SmartMotorControllerConfig.MotorMode;
+import yams.mechanisms.velocity.FlyWheel;
 import yams.motorcontrollers.SmartMotorController;
-import yams.motorcontrollers.remote.TalonFXWrapper;
 
 /**
- * Single IO implementation - works identically on real robot and in simulation!
+ * Single IO implementation - uses YAMS FlyWheel mechanism with SmartMotorController telemetry.
  */
 public class ShooterIOTalonFX implements ShooterIO {
 
+  private final FlyWheel flywheel;
   private final SmartMotorController motor;
 
   public ShooterIOTalonFX(SubsystemBase subsystem, int canId) {
-    SmartMotorControllerConfig config = new SmartMotorControllerConfig(subsystem)
-        .withControlMode(ControlMode.CLOSED_LOOP)
-        .withIdleMode(MotorMode.COAST)
-        .withGearing(new MechanismGearing(GearBox.fromReductionStages(1))) // Direct drive
-        .withMomentOfInertia(Inches.of(4), Pounds.of(0.5))  // Used for simulation physics!
-        .withClosedLoopController(0.5, 0, 0)
-        .withFeedforward(new SimpleMotorFeedforward(0.1, 0.12, 0.01))
-        .withClosedLoopTolerance(RotationsPerSecond.of(5))
-        .withTelemetry("Shooter", SmartMotorControllerConfig.TelemetryVerbosity.HIGH);
-
     TalonFX talonFX = new TalonFX(canId);
-    this.motor = new TalonFXWrapper(talonFX, DCMotor.getKrakenX60(1), config);
+    
+    // Create FlyWheel mechanism - handles simulation automatically!
+    this.flywheel = new FlyWheel(
+        subsystem,
+        talonFX,
+        DCMotor.getKrakenX60(1),
+        new MechanismGearing(GearBox.fromReductionStages(1)),  // Direct drive
+        Inches.of(4),      // Flywheel radius
+        Pounds.of(0.5)     // Flywheel mass - used for simulation physics
+    );
+    
+    flywheel.withClosedLoopController(0.5, 0, 0)
+            .withFeedforward(new SimpleMotorFeedforward(0.1, 0.12, 0.01))
+            .withClosedLoopTolerance(RotationsPerSecond.of(5))
+            .withTelemetry("Shooter");
+    
+    // Get reference to underlying SmartMotorController for telemetry
+    this.motor = flywheel.getSmartMotorController();
   }
 
   @Override
   public void updateInputs(ShooterIOInputs inputs) {
+    // Pull telemetry data from the underlying SmartMotorController
     inputs.velocityRotationsPerSec = motor.getMechanismVelocity().in(RotationsPerSecond);
     inputs.appliedVolts = motor.getVoltage().in(Volts);
     inputs.supplyCurrentAmps = motor.getSupplyCurrent().map(c -> c.in(Amps)).orElse(0.0);
@@ -366,12 +395,18 @@ public class ShooterIOTalonFX implements ShooterIO {
 
   @Override
   public void setTargetVelocity(double rotationsPerSec) {
-    motor.setVelocity(RotationsPerSecond.of(rotationsPerSec));
+    // Use the Mechanism class method for setting velocity
+    flywheel.setMechanismVelocitySetpoint(RotationsPerSecond.of(rotationsPerSec));
   }
 
   @Override
   public void stop() {
-    motor.setVoltage(Volts.of(0));
+    flywheel.setMechanismVoltageSetpoint(Volts.of(0));
+  }
+  
+  /** Access the FlyWheel mechanism for command helpers like run() and runTo() */
+  public FlyWheel getFlyWheel() {
+    return flywheel;
   }
 }
 ```
@@ -424,13 +459,13 @@ public class ArmSubsystem extends SubsystemBase {
    */
   public Command goToAngle(double rotations) {
     return run(() -> io.setTargetAngle(rotations))
-        .until(() -> isNear(rotations, 0.01))
+        .until(() -> isNear(Rotations.of(rotations), Rotations.of(0.01)))
         .withName("Arm.goToAngle(" + rotations + ")");
   }
 
-  /** Returns true if the arm is within tolerance of a target position. */
-  public boolean isNear(double targetRotations, double toleranceRotations) {
-    return Math.abs(inputs.positionRotations - targetRotations) < toleranceRotations;
+  /** Returns true if the arm is within tolerance of a target position using WPILib's isNear(). */
+  public boolean isNear(Angle target, Angle tolerance) {
+    return Rotations.of(inputs.positionRotations).isNear(target, tolerance);
   }
 
   /** Returns the current arm position in rotations. */
@@ -531,15 +566,39 @@ public RobotContainer() {
 Compare this to traditional AdvantageKit which requires **3 IO classes** (Real, Sim, Replay).
 {% endhint %}
 
-## Using YAMS Mechanism Classes with AdvantageKit
+## Pattern Summary: Mechanism Classes with SmartMotorController Telemetry
 
-The same passive simulation principle applies to YAMS Mechanism classes (in `yams.mechanisms.positional`, `yams.mechanisms.velocity`, `yams.mechanisms.swerve`, etc.). These classes wrap `SmartMotorController` and also simulate automatically.
+The examples above demonstrate the recommended pattern for using YAMS with AdvantageKit:
 
-When using Mechanism classes with AdvantageKit, you access the underlying `SmartMotorController` via the mechanism's getter methods. The Mechanism classes provide higher-level abstractions while still benefiting from passive simulation.
+1. **Create Mechanism classes** (`Arm`, `Elevator`, `FlyWheel`, etc.) for high-level control
+2. **Get the underlying `SmartMotorController`** via `mechanism.getSmartMotorController()`
+3. **Pull telemetry from `SmartMotorController`** for AdvantageKit logging
+4. **Use Mechanism methods** like `setMechanismPositionSetpoint()` for control
+5. **Optionally expose the Mechanism** via a getter for command helpers like `run()` and `runTo()`
+
+This pattern gives you the best of both worlds:
+- **Mechanism classes** provide convenient configuration and command helpers
+- **SmartMotorController** provides detailed telemetry for AdvantageKit logging
+- **Passive simulation** works automatically in both
 
 {% hint style="info" %}
 See the [YAMS example code](https://github.com/Yet-Another-Software-Suite/YAMS/tree/master/examples/simple_robot/src/main/java/frc/robot/subsystems/akit) for complete examples of using YAMS Mechanism classes with AdvantageKit's IO pattern.
 {% endhint %}
+
+### Using WPILib's isNear() for Tolerance Checking
+
+When checking if a mechanism is at its target, use the `isNear()` method from WPILib's unit classes (`Angle`, `Distance`, `AngularVelocity`):
+
+```java
+// In your subsystem, check if position is near target
+Angle currentPosition = Rotations.of(inputs.positionRotations);
+Angle targetPosition = Rotations.of(targetRotations);
+Angle tolerance = Rotations.of(0.01);
+
+boolean atTarget = currentPosition.isNear(targetPosition, tolerance);
+```
+
+This approach works with any unit type and handles conversions automatically.
 
 ## Benefits of YAMS + AdvantageKit
 
