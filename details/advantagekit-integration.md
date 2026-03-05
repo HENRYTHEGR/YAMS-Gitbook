@@ -100,7 +100,6 @@ public interface ArmIO {
     public double statorCurrentAmps = 0.0;
     public double temperatureCelsius = 0.0;
     public double targetPositionRotations = 0.0;
-    public boolean atGoal = false;
   }
 
   /** Update the inputs from hardware. Called every loop cycle. */
@@ -132,7 +131,6 @@ public interface ElevatorIO {
     public double statorCurrentAmps = 0.0;
     public double temperatureCelsius = 0.0;
     public double targetPositionMeters = 0.0;
-    public boolean atGoal = false;
   }
 
   default void updateInputs(ElevatorIOInputs inputs) {}
@@ -160,7 +158,6 @@ public interface ShooterIO {
     public double statorCurrentAmps = 0.0;
     public double temperatureCelsius = 0.0;
     public double targetVelocityRotationsPerSec = 0.0;
-    public boolean atGoal = false;
   }
 
   default void updateInputs(ShooterIOInputs inputs) {}
@@ -229,22 +226,22 @@ public class ArmIOTalonFX implements ArmIO {
     // These return real values on robot, simulated values in sim
     inputs.positionRotations = motor.getMechanismPosition().in(Rotations);
     inputs.velocityRotationsPerSec = motor.getMechanismVelocity().in(RotationsPerSecond);
-    inputs.appliedVolts = motor.getAppliedVoltage().in(Volts);
-    inputs.supplyCurrentAmps = motor.getSupplyCurrent().in(Amps);
+    inputs.appliedVolts = motor.getVoltage().in(Volts);
+    inputs.supplyCurrentAmps = motor.getSupplyCurrent().map(c -> c.in(Amps)).orElse(0.0);
     inputs.statorCurrentAmps = motor.getStatorCurrent().in(Amps);
     inputs.temperatureCelsius = motor.getTemperature().in(Celsius);
-    inputs.targetPositionRotations = motor.getClosedLoopTarget().in(Rotations);
-    inputs.atGoal = motor.isNear(Rotations.of(0.01));
+    inputs.targetPositionRotations = motor.getMechanismPositionSetpoint()
+        .map(a -> a.in(Rotations)).orElse(0.0);
   }
 
   @Override
   public void setTargetAngle(double rotations) {
-    motor.setTarget(Rotations.of(rotations));
+    motor.setPosition(Rotations.of(rotations));
   }
 
   @Override
   public void stop() {
-    motor.stop();
+    motor.setVoltage(Volts.of(0));
   }
 }
 ```
@@ -294,24 +291,24 @@ public class ElevatorIOTalonFX implements ElevatorIO {
 
   @Override
   public void updateInputs(ElevatorIOInputs inputs) {
-    inputs.positionMeters = motor.getLinearPosition().in(Meters);
-    inputs.velocityMetersPerSec = motor.getLinearVelocity().in(MetersPerSecond);
-    inputs.appliedVolts = motor.getAppliedVoltage().in(Volts);
-    inputs.supplyCurrentAmps = motor.getSupplyCurrent().in(Amps);
+    inputs.positionMeters = motor.getMeasurementPosition().in(Meters);
+    inputs.velocityMetersPerSec = motor.getMeasurementVelocity().in(MetersPerSecond);
+    inputs.appliedVolts = motor.getVoltage().in(Volts);
+    inputs.supplyCurrentAmps = motor.getSupplyCurrent().map(c -> c.in(Amps)).orElse(0.0);
     inputs.statorCurrentAmps = motor.getStatorCurrent().in(Amps);
     inputs.temperatureCelsius = motor.getTemperature().in(Celsius);
-    inputs.targetPositionMeters = motor.getClosedLoopTarget().in(Meters);
-    inputs.atGoal = motor.isNear(Meters.of(0.01));
+    inputs.targetPositionMeters = motor.getMechanismPositionSetpoint()
+        .map(a -> motor.getConfig().convertFromMechanism(a).in(Meters)).orElse(0.0);
   }
 
   @Override
   public void setTargetHeight(double meters) {
-    motor.setTarget(Meters.of(meters));
+    motor.setPosition(Meters.of(meters));
   }
 
   @Override
   public void stop() {
-    motor.stop();
+    motor.setVoltage(Volts.of(0));
   }
 }
 ```
@@ -359,22 +356,22 @@ public class ShooterIOTalonFX implements ShooterIO {
   @Override
   public void updateInputs(ShooterIOInputs inputs) {
     inputs.velocityRotationsPerSec = motor.getMechanismVelocity().in(RotationsPerSecond);
-    inputs.appliedVolts = motor.getAppliedVoltage().in(Volts);
-    inputs.supplyCurrentAmps = motor.getSupplyCurrent().in(Amps);
+    inputs.appliedVolts = motor.getVoltage().in(Volts);
+    inputs.supplyCurrentAmps = motor.getSupplyCurrent().map(c -> c.in(Amps)).orElse(0.0);
     inputs.statorCurrentAmps = motor.getStatorCurrent().in(Amps);
     inputs.temperatureCelsius = motor.getTemperature().in(Celsius);
-    inputs.targetVelocityRotationsPerSec = motor.getClosedLoopTarget().in(RotationsPerSecond);
-    inputs.atGoal = motor.isNear(RotationsPerSecond.of(5));
+    inputs.targetVelocityRotationsPerSec = motor.getMechanismSetpointVelocity()
+        .map(v -> v.in(RotationsPerSecond)).orElse(0.0);
   }
 
   @Override
   public void setTargetVelocity(double rotationsPerSec) {
-    motor.setTarget(RotationsPerSecond.of(rotationsPerSec));
+    motor.setVelocity(RotationsPerSecond.of(rotationsPerSec));
   }
 
   @Override
   public void stop() {
-    motor.stop();
+    motor.setVoltage(Volts.of(0));
   }
 }
 ```
@@ -427,13 +424,13 @@ public class ArmSubsystem extends SubsystemBase {
    */
   public Command goToAngle(double rotations) {
     return run(() -> io.setTargetAngle(rotations))
-        .until(() -> inputs.atGoal)
+        .until(() -> isNear(rotations, 0.01))
         .withName("Arm.goToAngle(" + rotations + ")");
   }
 
-  /** Returns true if the arm is at its target position. */
-  public boolean atGoal() {
-    return inputs.atGoal;
+  /** Returns true if the arm is within tolerance of a target position. */
+  public boolean isNear(double targetRotations, double toleranceRotations) {
+    return Math.abs(inputs.positionRotations - targetRotations) < toleranceRotations;
   }
 
   /** Returns the current arm position in rotations. */
@@ -536,45 +533,13 @@ Compare this to traditional AdvantageKit which requires **3 IO classes** (Real, 
 
 ## Using YAMS Mechanism Classes with AdvantageKit
 
-The same passive simulation principle applies to YAMS Mechanism classes (`Arm`, `Elevator`, `FlyWheel`, `SwerveModule`, `SwerveDrive`, etc.). These classes also simulate automatically:
+The same passive simulation principle applies to YAMS Mechanism classes (in `yams.mechanisms.positional`, `yams.mechanisms.velocity`, `yams.mechanisms.swerve`, etc.). These classes wrap `SmartMotorController` and also simulate automatically.
 
-```java
-public class ArmIOYAMS implements ArmIO {
+When using Mechanism classes with AdvantageKit, you access the underlying `SmartMotorController` via the mechanism's getter methods. The Mechanism classes provide higher-level abstractions while still benefiting from passive simulation.
 
-  private final Arm arm;
-
-  public ArmIOYAMS(SubsystemBase subsystem, int canId) {
-    TalonFX talonFX = new TalonFX(canId);
-    
-    // The Arm class handles simulation automatically!
-    this.arm = new Arm(
-        subsystem,
-        talonFX,
-        DCMotor.getKrakenX60(1),
-        new MechanismGearing(GearBox.fromReductionStages(5, 4, 3)),
-        Inches.of(18),  // Arm length - used for simulation physics
-        Pounds.of(5)    // Arm mass - used for simulation physics
-    );
-    
-    arm.withClosedLoopController(5, 0, 0.1)
-       .withFeedforward(new ArmFeedforward(0.1, 0.3, 0.5, 0.01))
-       .withTrapezoidalProfile(1.0, 2.0);
-  }
-
-  @Override
-  public void updateInputs(ArmIOInputs inputs) {
-    // Works identically on real robot and in simulation
-    inputs.positionRotations = arm.getPosition().in(Rotations);
-    inputs.velocityRotationsPerSec = arm.getVelocity().in(RotationsPerSecond);
-    // ... etc
-  }
-
-  @Override
-  public void setTargetAngle(double rotations) {
-    arm.setTargetPosition(Rotations.of(rotations));
-  }
-}
-```
+{% hint style="info" %}
+See the [YAMS example code](https://github.com/Yet-Another-Software-Suite/YAMS/tree/master/examples/simple_robot/src/main/java/frc/robot/subsystems/akit) for complete examples of using YAMS Mechanism classes with AdvantageKit's IO pattern.
+{% endhint %}
 
 ## Benefits of YAMS + AdvantageKit
 
