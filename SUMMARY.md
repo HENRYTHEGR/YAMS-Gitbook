@@ -27,6 +27,7 @@
 
 ## Details
 
+* [System Identification (SysId)](details/sysid.md)
 * [Simulation Only PID + FeedForward](details/simulation-only-pid-+-feedforward.md)
 * [Sensors](details/sensors.md)
 * [Limiting Power Consumption](details/limiting-power-consumption.md)
