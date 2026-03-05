@@ -33,6 +33,7 @@
 * [Motor Controller Feature Matrix](details/feature-matrix.md)
 * [Exponential Profiles](details/exponential-profiles.md)
 * [LQR Controllers](details/lqr-controllers.md)
+* [run() vs runTo() Commands](details/run-vs-runto.md)
 * [EasyCRT](details/easycrt.md)
 * [Arms](details/arms.md)
 * [Elevators](details/elevators.md)
