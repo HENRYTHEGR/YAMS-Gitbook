@@ -20,7 +20,7 @@ public class ArmSubsystem extends SubsystemBase {
         .withGearing(new MechanismGearing(GearBox.fromReductionStages(5, 4, 3)))
         .withClosedLoopController(5, 0, 0.1)
         .withFeedforward(new ArmFeedforward(0.1, 0.3, 0.5, 0.01))
-        .withTrapezoidalProfile(1.0, 2.0);
+        .withTrapezoidalProfile(RotationsPerSecond.of(1.0), RotationsPerSecondPerSecond.of(2.0));
     
     SmartMotorController smc = new TalonFXWrapper(new TalonFX(1), DCMotor.getKrakenX60(1), smcConfig);
     
@@ -56,7 +56,7 @@ public final class Constants {
             .withGearing(new MechanismGearing(GearBox.fromReductionStages(5, 4, 3)))
             .withClosedLoopController(5, 0, 0.1)
             .withFeedforward(new ArmFeedforward(0.1, 0.3, 0.5, 0.01))
-            .withTrapezoidalProfile(1.0, 2.0);
+            .withTrapezoidalProfile(RotationsPerSecond.of(1.0), RotationsPerSecondPerSecond.of(2.0));
     
     public static final ArmConfig ARM_CONFIG = 
         new ArmConfig()  // No SmartMotorController yet!
@@ -77,7 +77,7 @@ public final class Constants {
             .withMechanismCircumference(Inches.of(1.5 * Math.PI))
             .withClosedLoopController(10, 0, 0.5)
             .withFeedforward(new ElevatorFeedforward(0.1, 0.2, 0.5, 0.01))
-            .withTrapezoidalProfile(1.0, 2.0);
+            .withTrapezoidalProfile(MetersPerSecond.of(1.0), MetersPerSecondPerSecond.of(2.0));
     
     public static final ElevatorConfig ELEVATOR_CONFIG = 
         new ElevatorConfig()
@@ -181,7 +181,7 @@ public final class Constants {
             .withGearing(new MechanismGearing(GearBox.fromReductionStages(5, 4, 3)))
             .withClosedLoopController(5, 0, 0.1)
             .withFeedforward(new ArmFeedforward(0.1, 0.3, 0.5, 0.01))
-            .withTrapezoidalProfile(1.0, 2.0)
+            .withTrapezoidalProfile(RotationsPerSecond.of(1.0), RotationsPerSecondPerSecond.of(2.0))
             .withIdleMode(MotorMode.BRAKE);
     
     public static final ArmConfig ARM_CONFIG = 
@@ -205,7 +205,7 @@ public final class Constants {
             .withMechanismCircumference(Inches.of(1.5 * Math.PI))
             .withClosedLoopController(10, 0, 0.5)
             .withFeedforward(new ElevatorFeedforward(0.1, 0.2, 0.5, 0.01))
-            .withTrapezoidalProfile(1.0, 2.0)
+            .withTrapezoidalProfile(MetersPerSecond.of(1.0), MetersPerSecondPerSecond.of(2.0))
             .withIdleMode(MotorMode.BRAKE);
     
     public static final ElevatorConfig ELEVATOR_CONFIG = 

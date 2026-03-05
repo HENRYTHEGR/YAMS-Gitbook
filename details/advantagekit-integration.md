@@ -213,7 +213,7 @@ public class ArmIOTalonFX implements ArmIO {
         .withGearing(new MechanismGearing(GearBox.fromReductionStages(5, 4, 3)))
         .withClosedLoopController(5, 0, 0.1)
         .withFeedforward(new ArmFeedforward(0.1, 0.3, 0.5, 0.01))
-        .withTrapezoidalProfile(1.0, 2.0); // rot/s, rot/s²
+        .withTrapezoidalProfile(RotationsPerSecond.of(1.0), RotationsPerSecondPerSecond.of(2.0));
     
     // Step 2: Create SmartMotorController (TalonFXWrapper)
     SmartMotorController smc = new TalonFXWrapper(talonFX, DCMotor.getKrakenX60(1), smcConfig);
@@ -302,7 +302,7 @@ public class ElevatorIOTalonFX implements ElevatorIO {
         .withMechanismCircumference(Inches.of(1.5 * Math.PI))  // Pulley circumference
         .withClosedLoopController(10, 0, 0.5)
         .withFeedforward(new ElevatorFeedforward(0.1, 0.2, 0.5, 0.01))
-        .withTrapezoidalProfile(1.0, 2.0); // m/s, m/s²
+        .withTrapezoidalProfile(MetersPerSecond.of(1.0), MetersPerSecondPerSecond.of(2.0));
     
     // Step 2: Create SmartMotorController (TalonFXWrapper)
     SmartMotorController smc = new TalonFXWrapper(talonFX, DCMotor.getKrakenX60(1), smcConfig);
