@@ -8,6 +8,7 @@
 * [Elevator](tutorials/elevator.md)
 * [Shooter/FlyWheels](tutorials/shooter-flywheels.md)
 * [Double FlyWheel](tutorials/double-flywheel.md)
+* [Swerve Drive](tutorials/swerve-drive.md)
 
 ## How To
 

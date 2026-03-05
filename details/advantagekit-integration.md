@@ -627,6 +627,258 @@ boolean atTarget = currentPosition.isNear(targetPosition, tolerance);
 
 This approach works with any unit type and handles conversions automatically.
 
+## Swerve Drive with AdvantageKit
+
+YAMS swerve integrates seamlessly with AdvantageKit. Here's a complete example based on the [official YAMS AdvantageKit swerve example](https://github.com/Yet-Another-Software-Suite/YAMS/blob/master/examples/advantage_kit/src/main/java/frc/robot/subsystems/SwerveSubsystem.java):
+
+```java
+package frc.robot.subsystems;
+
+import static edu.wpi.first.units.Units.*;
+
+import com.ctre.phoenix6.hardware.CANcoder;
+import com.ctre.phoenix6.hardware.Pigeon2;
+import com.revrobotics.spark.SparkLowLevel.MotorType;
+import com.revrobotics.spark.SparkMax;
+import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.kinematics.SwerveModulePosition;
+import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.units.measure.LinearVelocity;
+import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import java.util.function.DoubleSupplier;
+import java.util.function.Supplier;
+import org.littletonrobotics.junction.AutoLog;
+import org.littletonrobotics.junction.Logger;
+import yams.gearing.GearBox;
+import yams.gearing.MechanismGearing;
+import yams.mechanisms.config.SwerveDriveConfig;
+import yams.mechanisms.config.SwerveModuleConfig;
+import yams.mechanisms.swerve.SwerveDrive;
+import yams.mechanisms.swerve.SwerveModule;
+import yams.mechanisms.swerve.utility.SwerveInputStream;
+import yams.motorcontrollers.SmartMotorController;
+import yams.motorcontrollers.SmartMotorControllerConfig;
+import yams.motorcontrollers.SmartMotorControllerConfig.TelemetryVerbosity;
+import yams.motorcontrollers.local.SparkWrapper;
+
+public class SwerveSubsystem extends SubsystemBase {
+
+  private AngularVelocity maxAngularVelocity = DegreesPerSecond.of(720);
+  private LinearVelocity maxLinearVelocity = MetersPerSecond.of(4);
+  private Supplier<Angle> gyroAngleSupplier;
+  private SwerveDriveConfig config;
+
+  /** AdvantageKit inputs for the swerve drive */
+  @AutoLog
+  public static class SwerveInputs {
+    public SwerveModulePosition[] positions = new SwerveModulePosition[4];
+    public SwerveModuleState[] states = new SwerveModuleState[4];
+    public Angle gyroRotation = Degrees.of(0);
+    public ChassisSpeeds robotRelativeSpeeds = new ChassisSpeeds(0, 0, 0);
+    public Pose2d estimatedPose = new Pose2d(0, 0, Rotation2d.fromDegrees(0));
+  }
+
+  private final SwerveInputsAutoLogged swerveInputs = new SwerveInputsAutoLogged();
+  private final SwerveDrive drive;
+
+  public SwerveModule createModule(SparkMax driveMotor, SparkMax azimuthMotor, 
+      CANcoder absoluteEncoder, String moduleName, Translation2d location) {
+    
+    MechanismGearing driveGearing = new MechanismGearing(GearBox.fromStages("12:1", "2:1"));
+    MechanismGearing azimuthGearing = new MechanismGearing(GearBox.fromStages("21:1"));
+    
+    SmartMotorControllerConfig driveCfg = new SmartMotorControllerConfig(this)
+        .withWheelDiameter(Inches.of(4))
+        .withClosedLoopController(50, 0, 4)
+        .withGearing(driveGearing)
+        .withStatorCurrentLimit(Amps.of(40))
+        .withTelemetry("driveMotor", TelemetryVerbosity.HIGH);
+    
+    SmartMotorControllerConfig azimuthCfg = new SmartMotorControllerConfig(this)
+        .withClosedLoopController(50, 0, 4)
+        .withContinuousWrapping(Radians.of(-Math.PI), Radians.of(Math.PI))
+        .withGearing(azimuthGearing)
+        .withStatorCurrentLimit(Amps.of(20))
+        .withTelemetry("angleMotor", TelemetryVerbosity.HIGH);
+    
+    SmartMotorController driveSMC = new SparkWrapper(driveMotor, DCMotor.getNEO(1), driveCfg);
+    SmartMotorController azimuthSMC = new SparkWrapper(azimuthMotor, DCMotor.getNEO(1), azimuthCfg);
+    
+    SwerveModuleConfig moduleConfig = new SwerveModuleConfig(driveSMC, azimuthSMC)
+        .withAbsoluteEncoder(absoluteEncoder.getAbsolutePosition().asSupplier())
+        .withTelemetry(moduleName, TelemetryVerbosity.HIGH)
+        .withLocation(location)
+        .withOptimization(true);
+    
+    return new SwerveModule(moduleConfig);
+  }
+
+  public SwerveInputStream getChassisSpeedsSupplier(DoubleSupplier x, DoubleSupplier y, 
+      DoubleSupplier rot) {
+    return new SwerveInputStream(drive, x, y, rot)
+        .withMaximumAngularVelocity(maxAngularVelocity)
+        .withMaximumLinearVelocity(maxLinearVelocity)
+        .withDeadband(0.01)
+        .withCubeRotationControllerAxis()
+        .withCubeTranslationControllerAxis()
+        .withAllianceRelativeControl();
+  }
+
+  public SwerveSubsystem() {
+    Pigeon2 gyro = new Pigeon2(14);
+    gyroAngleSupplier = gyro.getYaw().asSupplier();
+
+    var fl = createModule(new SparkMax(1, MotorType.kBrushless),
+        new SparkMax(2, MotorType.kBrushless), new CANcoder(3),
+        "frontleft", new Translation2d(Inches.of(12), Inches.of(12)));
+    var fr = createModule(new SparkMax(4, MotorType.kBrushless),
+        new SparkMax(5, MotorType.kBrushless), new CANcoder(6),
+        "frontright", new Translation2d(Inches.of(12), Inches.of(-12)));
+    var bl = createModule(new SparkMax(7, MotorType.kBrushless),
+        new SparkMax(8, MotorType.kBrushless), new CANcoder(9),
+        "backleft", new Translation2d(Inches.of(-12), Inches.of(12)));
+    var br = createModule(new SparkMax(10, MotorType.kBrushless),
+        new SparkMax(11, MotorType.kBrushless), new CANcoder(12),
+        "backright", new Translation2d(Inches.of(-12), Inches.of(-12)));
+
+    config = new SwerveDriveConfig(this, fl, fr, bl, br)
+        .withGyro(() -> getGyroAngle().getMeasure())
+        .withStartingPose(swerveInputs.estimatedPose)
+        .withTranslationController(new PIDController(1, 0, 0))
+        .withRotationController(new PIDController(1, 0, 0));
+    
+    drive = new SwerveDrive(config);
+  }
+
+  private Rotation2d getGyroAngle() {
+    return new Rotation2d(swerveInputs.gyroRotation);
+  }
+
+  private void updateInputs() {
+    swerveInputs.estimatedPose = drive.getPose();
+    swerveInputs.states = drive.getModuleStates();
+    swerveInputs.positions = drive.getModulePositions();
+    swerveInputs.robotRelativeSpeeds = drive.getRobotRelativeSpeed();
+    swerveInputs.gyroRotation = gyroAngleSupplier.get();
+  }
+
+  public Command setRobotRelativeChassisSpeeds(Supplier<ChassisSpeeds> speedsSupplier) {
+    return run(() -> {
+      Logger.recordOutput("Swerve/DesiredChassisSpeeds", speedsSupplier.get());
+      SwerveModuleState[] states = drive.getStateFromRobotRelativeChassisSpeeds(speedsSupplier.get());
+      Logger.recordOutput("Swerve/DesiredStates", states);
+      drive.setSwerveModuleStates(states);
+    }).withName("Set Robot Relative Chassis Speeds");
+  }
+
+  public Command driveToPose(Pose2d pose) {
+    return drive.driveToPose(pose);
+  }
+
+  public Command lock() {
+    return run(drive::lockPose);
+  }
+
+  public Pose2d getPose() { return swerveInputs.estimatedPose; }
+  public ChassisSpeeds getRobotRelativeSpeeds() { return swerveInputs.robotRelativeSpeeds; }
+
+  @Override
+  public void periodic() {
+    drive.updateTelemetry();  // Updates pose estimator - call BEFORE updateInputs
+    updateInputs();
+    Logger.processInputs("Swerve", swerveInputs);
+  }
+
+  @Override
+  public void simulationPeriodic() {
+    drive.simIterate();
+  }
+}
+```
+
+### Key Points for Swerve with AdvantageKit
+
+1. **Create an `@AutoLog` inputs class** with module states, positions, gyro, and pose
+2. **Update inputs AFTER `drive.updateTelemetry()`** - the pose estimator updates in `updateTelemetry()`
+3. **Log desired states and speeds** using `Logger.recordOutput()` for replay debugging
+4. **Call `simIterate()` in `simulationPeriodic()`** for physics simulation
+
+## Alternative Pattern: Direct Subsystem (No IO Layer)
+
+For simpler projects where replay isn't needed, you can use YAMS mechanisms directly as shown in the [official examples](https://github.com/Yet-Another-Software-Suite/YAMS/tree/master/examples/advantage_kit/src/main/java/frc/robot/subsystems):
+
+```java
+public class ArmSubsystem extends SubsystemBase {
+
+  @AutoLog
+  public static class ArmInputs {
+    public Angle pivotPosition = Degrees.of(0);
+    public AngularVelocity pivotVelocity = DegreesPerSecond.of(0);
+    public Voltage pivotAppliedVolts = Volts.of(0);
+    public Current pivotCurrent = Amps.of(0);
+  }
+
+  private final ArmInputsAutoLogged armInputs = new ArmInputsAutoLogged();
+  private final SmartMotorController armSMC;
+  private final Arm arm;
+
+  public ArmSubsystem() {
+    SmartMotorControllerConfig smcConfig = new SmartMotorControllerConfig(this)
+        .withControlMode(ControlMode.CLOSED_LOOP)
+        .withClosedLoopController(18, 0, 0.2,
+            DegreesPerSecond.of(458), DegreesPerSecondPerSecond.of(688))
+        .withFeedforward(new ArmFeedforward(-0.1, 1.2, 0, 0))
+        .withGearing(new MechanismGearing(GearBox.fromReductionStages(12.5, 1)))
+        .withIdleMode(MotorMode.BRAKE)
+        .withStatorCurrentLimit(Amps.of(120));
+
+    armSMC = new TalonFXWrapper(new TalonFX(40), DCMotor.getFalcon500(1), smcConfig);
+
+    ArmConfig armCfg = new ArmConfig(armSMC)
+        .withHardLimit(Degrees.of(-25), Degrees.of(141))
+        .withStartingPosition(Degrees.of(141))
+        .withLength(Feet.of(14.0 / 12))
+        .withMOI(0.1055)
+        .withTelemetry("Arm", TelemetryVerbosity.HIGH);
+
+    arm = new Arm(armCfg);
+  }
+
+  public void updateInputs() {
+    armInputs.pivotPosition = arm.getAngle();
+    armInputs.pivotVelocity = armSMC.getMechanismVelocity();
+    armInputs.pivotAppliedVolts = armSMC.getVoltage();
+    armInputs.pivotCurrent = armSMC.getStatorCurrent();
+  }
+
+  public Command setAngle(Angle angle) {
+    return arm.setAngle(angle);
+  }
+
+  @Override
+  public void periodic() {
+    updateInputs();
+    Logger.processInputs("Arm", armInputs);
+    arm.updateTelemetry();
+  }
+
+  @Override
+  public void simulationPeriodic() {
+    arm.simIterate();
+  }
+}
+```
+
+This pattern is simpler but doesn't support log replay. Choose based on your team's needs.
+
 ## Benefits of YAMS + AdvantageKit
 
 | Feature | Benefit |
