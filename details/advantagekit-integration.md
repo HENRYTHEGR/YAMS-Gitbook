@@ -21,28 +21,58 @@ AdvantageKit is optional. YAMS works perfectly without it using its built-in tel
 
 ## Architecture Overview
 
-AdvantageKit uses an [IO interface pattern](https://docs.advantagekit.org/data-flow/recording-inputs/io-interfaces) to separate hardware interaction from business logic:
+AdvantageKit uses an [IO interface pattern](https://docs.advantagekit.org/data-flow/recording-inputs/io-interfaces) to separate hardware interaction from business logic. Traditionally, this requires separate IO implementations for real hardware and simulation:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
+│  Traditional AdvantageKit Pattern (without YAMS)            │
+│                                                             │
 │                      Subsystem                              │
-│  (Business logic, commands, state management)               │
 │                          │                                  │
-│                          ▼                                  │
 │                    IO Interface                             │
-│              (Abstract input/output contract)               │
 │                    /           \                            │
-│                   /             \                           │
 │              IO Real           IO Sim                       │
-│         (Real hardware)    (Simulation)                     │
-│               │                  │                          │
-│               ▼                  ▼                          │
-│     SmartMotorController   SmartMotorController             │
-│        (TalonFXWrapper)      (SimWrapper)                   │
+│         (Real hardware)    (Physics sim)                    │
+│          - Manual motor     - DCMotorSim                    │
+│          - Manual encoders  - Manual state                  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-With YAMS, the `SmartMotorController` handles most of the complexity, so your IO implementations remain simple.
+## YAMS Simplification: One IO Class for Real and Sim
+
+**With YAMS, you don't need separate Real and Sim IO implementations.** Every `SmartMotorController` wrapper (TalonFXWrapper, SparkWrapper, etc.) and every Mechanism class (Arm, Elevator, FlyWheel, SwerveModule, SwerveDrive, etc.) includes **passive simulation** that runs automatically when `Robot.isSimulation()` returns true.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  YAMS Pattern: Single IO Implementation                     │
+│                                                             │
+│                      Subsystem                              │
+│                          │                                  │
+│                    IO Interface                             │
+│                          │                                  │
+│                    IO (Single!)  ◄── Same class for both!   │
+│                          │                                  │
+│               SmartMotorController                          │
+│                    or Mechanism                             │
+│                          │                                  │
+│          ┌───────────────┴───────────────┐                  │
+│          │                               │                  │
+│    Real Hardware              Passive Simulation            │
+│    (when deployed)            (when in sim)                 │
+│                                                             │
+│    Automatically selected based on Robot.isSimulation()    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+This means:
+- **One IO class** handles both real robot and simulation
+- **No duplicate code** - configuration is written once
+- **No SimWrapper needed** - real hardware wrappers simulate themselves
+- **Physics are automatic** - based on your DCMotor, gearing, and mass/MOI configuration
+
+{% hint style="success" %}
+**Key Insight**: When you create a `TalonFXWrapper`, `SparkWrapper`, `NovaWrapper`, or any YAMS Mechanism, the simulation physics run automatically in sim mode. You write your IO class once using real hardware objects, and YAMS handles the rest.
+{% endhint %}
 
 ## Step 1: Define the IO Interface
 
@@ -145,11 +175,11 @@ public interface ShooterIO {
 The `@AutoLog` annotation from AdvantageKit generates a class (e.g., `ArmIOInputsAutoLogged`) that handles serialization for log replay. See [AdvantageKit AutoLog documentation](https://docs.advantagekit.org/data-flow/recording-inputs/io-interfaces#autolog) for details.
 {% endhint %}
 
-## Step 2: Implement the Real IO Class
+## Step 2: Implement the IO Class
 
-The real IO implementation wraps a YAMS `SmartMotorController` and reads values from it.
+With YAMS, you only need **one IO implementation** that works for both real hardware and simulation. The `SmartMotorController` automatically detects when it's running in simulation and uses physics simulation instead of real hardware.
 
-### Arm IO Real Implementation
+### Arm IO Implementation (Works for Real and Sim!)
 
 ```java
 package frc.robot.subsystems.akit;
@@ -167,16 +197,20 @@ import yams.mechanisms.config.SmartMotorControllerConfig.MotorMode;
 import yams.motorcontrollers.SmartMotorController;
 import yams.motorcontrollers.remote.TalonFXWrapper;
 
-public class ArmIOReal implements ArmIO {
+/**
+ * Single IO implementation for the arm - works in BOTH real and simulation!
+ * YAMS handles simulation automatically via passive simulation in SmartMotorController.
+ */
+public class ArmIOTalonFX implements ArmIO {
 
   private final SmartMotorController motor;
 
-  public ArmIOReal(SubsystemBase subsystem, int canId) {
+  public ArmIOTalonFX(SubsystemBase subsystem, int canId) {
     SmartMotorControllerConfig config = new SmartMotorControllerConfig(subsystem)
         .withControlMode(ControlMode.CLOSED_LOOP)
         .withIdleMode(MotorMode.BRAKE)
         .withGearing(new MechanismGearing(GearBox.fromReductionStages(5, 4, 3)))
-        .withMomentOfInertia(Inches.of(18), Pounds.of(5))
+        .withMomentOfInertia(Inches.of(18), Pounds.of(5))  // Used for simulation physics!
         .withClosedLoopController(5, 0, 0.1)
         .withFeedforward(new ArmFeedforward(0.1, 0.3, 0.5, 0.01))
         .withTrapezoidalProfile(1.0, 2.0) // rot/s, rot/s²
@@ -184,13 +218,15 @@ public class ArmIOReal implements ArmIO {
         .withSoftLimits(Rotations.of(-0.25), Rotations.of(0.25))
         .withTelemetry("Arm", SmartMotorControllerConfig.TelemetryVerbosity.HIGH);
 
+    // TalonFXWrapper works on real robot AND in simulation!
+    // In sim, it uses the DCMotor, gearing, and MOI to simulate physics
     TalonFX talonFX = new TalonFX(canId);
     this.motor = new TalonFXWrapper(talonFX, DCMotor.getKrakenX60(1), config);
   }
 
   @Override
   public void updateInputs(ArmIOInputs inputs) {
-    // Read all values from SmartMotorController
+    // These return real values on robot, simulated values in sim
     inputs.positionRotations = motor.getMechanismPosition().in(Rotations);
     inputs.velocityRotationsPerSec = motor.getMechanismVelocity().in(RotationsPerSecond);
     inputs.appliedVolts = motor.getAppliedVoltage().in(Volts);
@@ -213,7 +249,7 @@ public class ArmIOReal implements ArmIO {
 }
 ```
 
-### Elevator IO Real Implementation
+### Elevator IO Implementation (Works for Real and Sim!)
 
 ```java
 package frc.robot.subsystems.akit;
@@ -231,17 +267,20 @@ import yams.mechanisms.config.SmartMotorControllerConfig.MotorMode;
 import yams.motorcontrollers.SmartMotorController;
 import yams.motorcontrollers.remote.TalonFXWrapper;
 
-public class ElevatorIOReal implements ElevatorIO {
+/**
+ * Single IO implementation - passive simulation handles sim mode automatically!
+ */
+public class ElevatorIOTalonFX implements ElevatorIO {
 
   private final SmartMotorController motor;
 
-  public ElevatorIOReal(SubsystemBase subsystem, int canId) {
+  public ElevatorIOTalonFX(SubsystemBase subsystem, int canId) {
     SmartMotorControllerConfig config = new SmartMotorControllerConfig(subsystem)
         .withControlMode(ControlMode.CLOSED_LOOP)
         .withIdleMode(MotorMode.BRAKE)
         .withGearing(new MechanismGearing(GearBox.fromReductionStages(5, 4)))
         .withCircumference(Inches.of(1.5 * Math.PI)) // Pulley circumference
-        .withCarriageMass(Pounds.of(10))
+        .withCarriageMass(Pounds.of(10))  // Used for simulation physics!
         .withClosedLoopController(10, 0, 0.5)
         .withFeedforward(new ElevatorFeedforward(0.1, 0.2, 0.5, 0.01))
         .withTrapezoidalProfile(1.0, 2.0) // m/s, m/s²
@@ -277,7 +316,7 @@ public class ElevatorIOReal implements ElevatorIO {
 }
 ```
 
-### Shooter IO Real Implementation
+### Shooter IO Implementation (Works for Real and Sim!)
 
 ```java
 package frc.robot.subsystems.akit;
@@ -295,16 +334,19 @@ import yams.mechanisms.config.SmartMotorControllerConfig.MotorMode;
 import yams.motorcontrollers.SmartMotorController;
 import yams.motorcontrollers.remote.TalonFXWrapper;
 
-public class ShooterIOReal implements ShooterIO {
+/**
+ * Single IO implementation - works identically on real robot and in simulation!
+ */
+public class ShooterIOTalonFX implements ShooterIO {
 
   private final SmartMotorController motor;
 
-  public ShooterIOReal(SubsystemBase subsystem, int canId) {
+  public ShooterIOTalonFX(SubsystemBase subsystem, int canId) {
     SmartMotorControllerConfig config = new SmartMotorControllerConfig(subsystem)
         .withControlMode(ControlMode.CLOSED_LOOP)
         .withIdleMode(MotorMode.COAST)
         .withGearing(new MechanismGearing(GearBox.fromReductionStages(1))) // Direct drive
-        .withMomentOfInertia(Inches.of(4), Pounds.of(0.5))
+        .withMomentOfInertia(Inches.of(4), Pounds.of(0.5))  // Used for simulation physics!
         .withClosedLoopController(0.5, 0, 0)
         .withFeedforward(new SimpleMotorFeedforward(0.1, 0.12, 0.01))
         .withClosedLoopTolerance(RotationsPerSecond.of(5))
@@ -337,76 +379,11 @@ public class ShooterIOReal implements ShooterIO {
 }
 ```
 
-## Step 3: Implement the Sim IO Class
-
-For simulation and log replay, create an IO implementation that doesn't touch real hardware. YAMS's `SimWrapper` handles physics simulation automatically.
-
-```java
-package frc.robot.subsystems.akit;
-
-import static edu.wpi.first.units.Units.*;
-
-import edu.wpi.first.math.system.plant.DCMotor;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import yams.gearing.GearBox;
-import yams.gearing.MechanismGearing;
-import yams.mechanisms.config.SmartMotorControllerConfig;
-import yams.mechanisms.config.SmartMotorControllerConfig.ControlMode;
-import yams.mechanisms.config.SmartMotorControllerConfig.MotorMode;
-import yams.motorcontrollers.SmartMotorController;
-import yams.motorcontrollers.local.SimWrapper;
-
-public class ArmIOSim implements ArmIO {
-
-  private final SmartMotorController motor;
-
-  public ArmIOSim(SubsystemBase subsystem) {
-    // Same config as real, but using SimWrapper
-    SmartMotorControllerConfig config = new SmartMotorControllerConfig(subsystem)
-        .withControlMode(ControlMode.CLOSED_LOOP)
-        .withIdleMode(MotorMode.BRAKE)
-        .withGearing(new MechanismGearing(GearBox.fromReductionStages(5, 4, 3)))
-        .withMomentOfInertia(Inches.of(18), Pounds.of(5))
-        .withClosedLoopController(5, 0, 0.1)
-        .withFeedforward(new ArmFeedforward(0.1, 0.3, 0.5, 0.01))
-        .withTrapezoidalProfile(1.0, 2.0)
-        .withClosedLoopTolerance(Rotations.of(0.01))
-        .withSoftLimits(Rotations.of(-0.25), Rotations.of(0.25))
-        .withTelemetry("Arm", SmartMotorControllerConfig.TelemetryVerbosity.HIGH);
-
-    // SimWrapper for physics simulation
-    this.motor = new SimWrapper(DCMotor.getKrakenX60(1), config);
-  }
-
-  @Override
-  public void updateInputs(ArmIOInputs inputs) {
-    inputs.positionRotations = motor.getMechanismPosition().in(Rotations);
-    inputs.velocityRotationsPerSec = motor.getMechanismVelocity().in(RotationsPerSecond);
-    inputs.appliedVolts = motor.getAppliedVoltage().in(Volts);
-    inputs.supplyCurrentAmps = motor.getSupplyCurrent().in(Amps);
-    inputs.statorCurrentAmps = motor.getStatorCurrent().in(Amps);
-    inputs.temperatureCelsius = motor.getTemperature().in(Celsius);
-    inputs.targetPositionRotations = motor.getClosedLoopTarget().in(Rotations);
-    inputs.atGoal = motor.isNear(Rotations.of(0.01));
-  }
-
-  @Override
-  public void setTargetAngle(double rotations) {
-    motor.setTarget(Rotations.of(rotations));
-  }
-
-  @Override
-  public void stop() {
-    motor.stop();
-  }
-}
-```
-
 {% hint style="success" %}
-**Tip**: Extract the `SmartMotorControllerConfig` creation into a shared constants class so both Real and Sim implementations use identical configuration.
+**Why This Works**: YAMS's passive simulation is built into every wrapper. When `Robot.isSimulation()` is true, the `TalonFXWrapper` (and all other wrappers) automatically uses the `DCMotor`, gearing, and mass/MOI you provided to simulate physics. You get accurate simulation without writing any simulation-specific code!
 {% endhint %}
 
-## Step 4: Create the Subsystem
+## Step 3: Create the Subsystem
 
 The subsystem uses the IO interface and doesn't know whether it's running on real hardware or in simulation.
 
@@ -475,14 +452,13 @@ public class ArmSubsystem extends SubsystemBase {
 See [run() vs runTo() Commands](run-vs-runto.md) for important information about when commands end and how that interacts with default commands.
 {% endhint %}
 
-## Step 5: Wire It Up in RobotContainer
+## Step 4: Wire It Up in RobotContainer
 
-Use `Robot.isReal()` or AdvantageKit's mode detection to choose the appropriate IO implementation:
+With YAMS's passive simulation, you don't need conditional logic for real vs sim - the same IO class works for both!
 
 ```java
 package frc.robot;
 
-import edu.wpi.first.wpilibj.RobotBase;
 import frc.robot.subsystems.akit.*;
 
 public class RobotContainer {
@@ -492,22 +468,17 @@ public class RobotContainer {
   private final ShooterSubsystem shooter;
 
   public RobotContainer() {
-    // Create subsystems with appropriate IO implementation
-    if (RobotBase.isReal()) {
-      arm = new ArmSubsystem(new ArmIOReal(arm, 1));
-      elevator = new ElevatorSubsystem(new ElevatorIOReal(elevator, 2));
-      shooter = new ShooterSubsystem(new ShooterIOReal(shooter, 3));
-    } else {
-      arm = new ArmSubsystem(new ArmIOSim(arm));
-      elevator = new ElevatorSubsystem(new ElevatorIOSim(elevator));
-      shooter = new ShooterSubsystem(new ShooterIOSim(shooter));
-    }
+    // Same IO implementation works for BOTH real robot and simulation!
+    // No need for if(RobotBase.isReal()) checks - YAMS handles it automatically
+    arm = new ArmSubsystem(new ArmIOTalonFX(arm, 1));
+    elevator = new ElevatorSubsystem(new ElevatorIOTalonFX(elevator, 2));
+    shooter = new ShooterSubsystem(new ShooterIOTalonFX(shooter, 3));
 
     configureBindings();
   }
 
   private void configureBindings() {
-    // Commands work identically regardless of IO implementation
+    // Commands work identically on real robot and in simulation
     controller.a().onTrue(arm.setAngle(0.25));
     controller.b().onTrue(arm.setAngle(-0.25));
     controller.x().onTrue(elevator.setHeight(1.0));
@@ -516,9 +487,13 @@ public class RobotContainer {
 }
 ```
 
+{% hint style="info" %}
+**Compare to Traditional AdvantageKit**: Without YAMS, you'd need separate `ArmIOReal` and `ArmIOSim` classes with duplicate configuration. YAMS eliminates this duplication entirely.
+{% endhint %}
+
 ## Log Replay Mode
 
-For [log replay](https://docs.advantagekit.org/getting-started/what-is-advantagekit), AdvantageKit provides a "replay" mode where inputs are read from a log file instead of hardware. Create an empty IO implementation for this:
+For [log replay](https://docs.advantagekit.org/getting-started/what-is-advantagekit), AdvantageKit provides a "replay" mode where inputs are read from a log file instead of hardware. This is the **one case** where you need a separate IO implementation - an empty one that does nothing:
 
 ```java
 package frc.robot.subsystems.akit;
@@ -533,77 +508,84 @@ public class ArmIOReplay implements ArmIO {
 }
 ```
 
-Then in RobotContainer, detect replay mode:
+In RobotContainer, only check for replay mode:
 
 ```java
-switch (Constants.currentMode) {
-  case REAL:
-    arm = new ArmSubsystem(new ArmIOReal(arm, 1));
-    break;
-  case SIM:
-    arm = new ArmSubsystem(new ArmIOSim(arm));
-    break;
-  case REPLAY:
+public RobotContainer() {
+  if (Constants.currentMode == Mode.REPLAY) {
+    // Replay mode: empty IO, AdvantageKit injects logged values
     arm = new ArmSubsystem(new ArmIOReplay());
-    break;
-}
-```
-
-## Shared Configuration Pattern
-
-To avoid duplicating configuration between Real and Sim implementations, extract it to a constants class:
-
-```java
-package frc.robot.subsystems.akit;
-
-import static edu.wpi.first.units.Units.*;
-
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import yams.gearing.GearBox;
-import yams.gearing.MechanismGearing;
-import yams.mechanisms.config.SmartMotorControllerConfig;
-import yams.mechanisms.config.SmartMotorControllerConfig.ControlMode;
-import yams.mechanisms.config.SmartMotorControllerConfig.MotorMode;
-
-public class ArmConstants {
-
-  public static SmartMotorControllerConfig createConfig(SubsystemBase subsystem) {
-    return new SmartMotorControllerConfig(subsystem)
-        .withControlMode(ControlMode.CLOSED_LOOP)
-        .withIdleMode(MotorMode.BRAKE)
-        .withGearing(new MechanismGearing(GearBox.fromReductionStages(5, 4, 3)))
-        .withMomentOfInertia(Inches.of(18), Pounds.of(5))
-        .withClosedLoopController(5, 0, 0.1)
-        .withFeedforward(new ArmFeedforward(0.1, 0.3, 0.5, 0.01))
-        .withTrapezoidalProfile(1.0, 2.0)
-        .withClosedLoopTolerance(Rotations.of(0.01))
-        .withSoftLimits(Rotations.of(-0.25), Rotations.of(0.25))
-        .withTelemetry("Arm", SmartMotorControllerConfig.TelemetryVerbosity.HIGH);
+    elevator = new ElevatorSubsystem(new ElevatorIOReplay());
+    shooter = new ShooterSubsystem(new ShooterIOReplay());
+  } else {
+    // Real AND Sim: same IO class works for both!
+    arm = new ArmSubsystem(new ArmIOTalonFX(arm, 1));
+    elevator = new ElevatorSubsystem(new ElevatorIOTalonFX(elevator, 2));
+    shooter = new ShooterSubsystem(new ShooterIOTalonFX(shooter, 3));
   }
 }
 ```
 
-Then in your IO implementations:
+{% hint style="success" %}
+**Summary**: With YAMS + AdvantageKit, you only need **2 IO classes** per mechanism:
+1. **One real IO class** (e.g., `ArmIOTalonFX`) - works for both real robot and simulation
+2. **One empty replay IO class** (e.g., `ArmIOReplay`) - for log replay only
+
+Compare this to traditional AdvantageKit which requires **3 IO classes** (Real, Sim, Replay).
+{% endhint %}
+
+## Using YAMS Mechanism Classes with AdvantageKit
+
+The same passive simulation principle applies to YAMS Mechanism classes (`Arm`, `Elevator`, `FlyWheel`, `SwerveModule`, `SwerveDrive`, etc.). These classes also simulate automatically:
 
 ```java
-// In ArmIOReal
-SmartMotorControllerConfig config = ArmConstants.createConfig(subsystem);
-this.motor = new TalonFXWrapper(talonFX, DCMotor.getKrakenX60(1), config);
+public class ArmIOYAMS implements ArmIO {
 
-// In ArmIOSim
-SmartMotorControllerConfig config = ArmConstants.createConfig(subsystem);
-this.motor = new SimWrapper(DCMotor.getKrakenX60(1), config);
+  private final Arm arm;
+
+  public ArmIOYAMS(SubsystemBase subsystem, int canId) {
+    TalonFX talonFX = new TalonFX(canId);
+    
+    // The Arm class handles simulation automatically!
+    this.arm = new Arm(
+        subsystem,
+        talonFX,
+        DCMotor.getKrakenX60(1),
+        new MechanismGearing(GearBox.fromReductionStages(5, 4, 3)),
+        Inches.of(18),  // Arm length - used for simulation physics
+        Pounds.of(5)    // Arm mass - used for simulation physics
+    );
+    
+    arm.withClosedLoopController(5, 0, 0.1)
+       .withFeedforward(new ArmFeedforward(0.1, 0.3, 0.5, 0.01))
+       .withTrapezoidalProfile(1.0, 2.0);
+  }
+
+  @Override
+  public void updateInputs(ArmIOInputs inputs) {
+    // Works identically on real robot and in simulation
+    inputs.positionRotations = arm.getPosition().in(Rotations);
+    inputs.velocityRotationsPerSec = arm.getVelocity().in(RotationsPerSecond);
+    // ... etc
+  }
+
+  @Override
+  public void setTargetAngle(double rotations) {
+    arm.setTargetPosition(Rotations.of(rotations));
+  }
+}
 ```
 
 ## Benefits of YAMS + AdvantageKit
 
 | Feature | Benefit |
 |---------|---------|
-| Deterministic Replay | Debug issues from real matches in simulation |
-| Unified Configuration | Same YAMS config works for real and sim |
-| Physics Simulation | YAMS `SimWrapper` provides accurate mechanism physics |
-| Automatic Logging | AdvantageKit logs all inputs automatically |
-| Flexible IO | Swap hardware vendors without changing subsystem logic |
+| **No Duplicate IO Classes** | Single IO class works for real robot AND simulation |
+| **Deterministic Replay** | Debug issues from real matches using log replay |
+| **Automatic Physics** | YAMS uses DCMotor, gearing, and mass/MOI for accurate sim |
+| **Less Boilerplate** | 2 IO classes instead of 3 per mechanism |
+| **Consistent Behavior** | Same code paths execute in real and sim modes |
+| **Flexible Hardware** | Swap vendors by changing one IO class |
 
 ## Further Reading
 
