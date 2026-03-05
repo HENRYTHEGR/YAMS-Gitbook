@@ -171,50 +171,58 @@ The `SysIdRoutine` requires two objects:
 2. **Mechanism** - Callbacks for driving motors and logging data
 
 ```java
+import static edu.wpi.first.units.Units.Rotations;
+import static edu.wpi.first.units.Units.RotationsPerSecond;
+import static edu.wpi.first.units.Units.Seconds;
+import static edu.wpi.first.units.Units.Volts;
+
+import edu.wpi.first.units.measure.MutAngle;
+import edu.wpi.first.units.measure.MutAngularVelocity;
+import edu.wpi.first.units.measure.MutVoltage;
+import edu.wpi.first.units.measure.Voltage;
+import edu.wpi.first.wpilibj.RobotController;
+import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
-import edu.wpi.first.units.Units.*;
+import yams.motorcontrollers.SmartMotorController;
 
 public class ManualSysIdSubsystem extends SubsystemBase {
 
   private SmartMotorController motor; // Your YAMS SmartMotorController
-  
+
+  // Mutable holders to avoid allocations during logging
+  private final MutVoltage m_appliedVoltage = new MutVoltage(0, 0, Volts);
+  private final MutAngle m_position = new MutAngle(0, 0, Rotations);
+  private final MutAngularVelocity m_velocity = new MutAngularVelocity(0, 0, RotationsPerSecond);
+
   // Create the SysIdRoutine
   private final SysIdRoutine sysIdRoutine = new SysIdRoutine(
-      // Config: ramp rate, step voltage, timeout, state callback
+      // Config: ramp rate, step voltage, timeout
       new SysIdRoutine.Config(
-          Volts.of(2).per(Second),  // Quasistatic ramp rate (default: 1 V/s)
-          Volts.of(7),               // Dynamic step voltage (default: 7 V)
-          Seconds.of(4),             // Timeout (default: 10 s)
-          null                       // Log state callback (null = use WPILog)
+          Volts.of(1).per(Seconds.of(1)),  // Quasistatic ramp rate (1 V/s)
+          Volts.of(4),                      // Dynamic step voltage
+          Seconds.of(10)                    // Timeout
       ),
       new SysIdRoutine.Mechanism(
-          this::driveMotor,          // Voltage consumer
-          this::logMotor,            // Log consumer  
-          this,                      // Subsystem for requirements
-          "MyMechanism"              // Name for logging
+          // Drive callback - applies voltage to motors
+          (Voltage voltage) -> motor.setDutyCycle(
+              voltage.in(Volts) / RobotController.getBatteryVoltage()
+          ),
+          // Log callback - records position, velocity, and voltage
+          log -> {
+            motor.updateTelemetry();
+            motor.simIterate();
+            log.motor("motor")
+                .voltage(
+                    m_appliedVoltage.mut_replace(
+                        motor.getDutyCycle() * RobotController.getBatteryVoltage(), Volts))
+                .angularPosition(m_position.mut_replace(motor.getMechanismPosition()))
+                .angularVelocity(m_velocity.mut_replace(motor.getMechanismVelocity()));
+          },
+          this,           // Subsystem for requirements
+          "MyMechanism"   // Name for logging
       )
   );
-
-  /**
-   * Drive callback - applies voltage to motors.
-   */
-  private void driveMotor(Measure<Voltage> voltage) {
-    motor.setVoltage(voltage.in(Volts));
-  }
-
-  /**
-   * Log callback - records position, velocity, and voltage.
-   */
-  private void logMotor(SysIdRoutineLog log) {
-    log.motor("motor")
-        .voltage(Volts.of(motor.getAppliedVoltage()))
-        .linearPosition(Meters.of(motor.getMeasurement().in(Meters)))
-        .linearVelocity(MetersPerSecond.of(motor.getMeasurementVelocity().in(MetersPerSecond)));
-  }
-
-  // For angular mechanisms (arms), use angularPosition and angularVelocity instead:
-  // .angularPosition(Radians.of(motor.getPosition().in(Radians)))
-  // .angularVelocity(RadiansPerSecond.of(motor.getVelocity().in(RadiansPerSecond)))
 
   /**
    * Returns the quasistatic test command.
@@ -226,6 +234,92 @@ public class ManualSysIdSubsystem extends SubsystemBase {
   /**
    * Returns the dynamic test command.
    */
+  public Command sysIdDynamic(SysIdRoutine.Direction direction) {
+    return sysIdRoutine.dynamic(direction);
+  }
+}
+```
+
+### Reusable SysIdRoutine Factory Method
+
+You can create a static helper method to generate `SysIdRoutine` instances for any `SmartMotorController`:
+
+```java
+import static edu.wpi.first.units.Units.Rotations;
+import static edu.wpi.first.units.Units.RotationsPerSecond;
+import static edu.wpi.first.units.Units.Seconds;
+import static edu.wpi.first.units.Units.Volts;
+
+import edu.wpi.first.units.measure.MutAngle;
+import edu.wpi.first.units.measure.MutAngularVelocity;
+import edu.wpi.first.units.measure.MutVoltage;
+import edu.wpi.first.units.measure.Voltage;
+import edu.wpi.first.wpilibj.RobotController;
+import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import yams.motorcontrollers.SmartMotorController;
+
+public class SystemIdentification {
+
+  private static final MutVoltage m_appliedVoltage = new MutVoltage(0, 0, Volts);
+  private static final MutAngle m_distance = new MutAngle(0, 0, Rotations);
+  private static final MutAngularVelocity m_velocity = 
+      new MutAngularVelocity(0, 0, RotationsPerSecond);
+
+  /**
+   * Creates a SysIdRoutine for a SmartMotorController.
+   *
+   * @param motor         The SmartMotorController to characterize
+   * @param motorName     Name for logging (appears in SysId tool)
+   * @param subsystemBase The subsystem that owns this motor
+   * @return A configured SysIdRoutine
+   */
+  public static SysIdRoutine createRoutine(
+      SmartMotorController motor, 
+      String motorName, 
+      SubsystemBase subsystemBase) {
+
+    return new SysIdRoutine(
+        new SysIdRoutine.Config(
+            Volts.of(1).per(Seconds.of(1)),  // Ramp rate: 1 V/s
+            Volts.of(4),                      // Step voltage: 4 V
+            Seconds.of(10)                    // Timeout: 10 s
+        ),
+        new SysIdRoutine.Mechanism(
+            (Voltage voltage) -> motor.setDutyCycle(
+                voltage.in(Volts) / RobotController.getBatteryVoltage()),
+            log -> {
+              motor.updateTelemetry();
+              motor.simIterate();
+              log.motor(motorName)
+                  .voltage(m_appliedVoltage.mut_replace(
+                      motor.getDutyCycle() * RobotController.getBatteryVoltage(), Volts))
+                  .angularPosition(m_distance.mut_replace(motor.getMechanismPosition()))
+                  .angularVelocity(m_velocity.mut_replace(motor.getMechanismVelocity()));
+            },
+            subsystemBase,
+            motorName));
+  }
+}
+```
+
+Then use it in your subsystem:
+
+```java
+public class ShooterSubsystem extends SubsystemBase {
+  
+  private SmartMotorController shooterMotor;
+  private final SysIdRoutine sysIdRoutine;
+  
+  public ShooterSubsystem() {
+    // ... motor configuration ...
+    sysIdRoutine = SystemIdentification.createRoutine(shooterMotor, "Shooter", this);
+  }
+  
+  public Command sysIdQuasistatic(SysIdRoutine.Direction direction) {
+    return sysIdRoutine.quasistatic(direction);
+  }
+  
   public Command sysIdDynamic(SysIdRoutine.Direction direction) {
     return sysIdRoutine.dynamic(direction);
   }
@@ -251,6 +345,74 @@ private void configureBindings() {
 {% hint style="warning" %}
 Only log files with a **single routine** in them are usable for analysis. If you run a routine on one motor and then run a routine on another motor without extracting the log or power-cycling the roboRIO in between, analysis will fail.
 {% endhint %}
+
+### Running All Tests with One Command
+
+You can combine all four tests into a single command sequence that runs automatically:
+
+```java
+import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+
+public static Command getFullSysIdCommand(
+    SysIdRoutine routine,
+    double quasistaticTimeout,
+    double dynamicTimeout,
+    double delayBetweenTests) {
+  
+  return routine.quasistatic(SysIdRoutine.Direction.kForward)
+      .withTimeout(quasistaticTimeout)
+      .andThen(Commands.waitSeconds(delayBetweenTests))
+      .andThen(routine.quasistatic(SysIdRoutine.Direction.kReverse)
+          .withTimeout(quasistaticTimeout))
+      .andThen(Commands.waitSeconds(delayBetweenTests))
+      .andThen(routine.dynamic(SysIdRoutine.Direction.kForward)
+          .withTimeout(dynamicTimeout))
+      .andThen(Commands.waitSeconds(delayBetweenTests))
+      .andThen(routine.dynamic(SysIdRoutine.Direction.kReverse)
+          .withTimeout(dynamicTimeout));
+}
+
+// Usage:
+controller.a().whileTrue(
+    getFullSysIdCommand(sysIdRoutine, 4.0, 2.0, 1.0)
+);
+```
+
+For mechanisms with limits (arms, elevators), you can add safety stops:
+
+```java
+public static Command getFullSysIdCommand(
+    SysIdRoutine routine,
+    double quasistaticTimeout,
+    double dynamicTimeout,
+    double delay,
+    BooleanSupplier isAtMax,
+    BooleanSupplier isAtMin,
+    Runnable stopMotor) {
+  
+  return routine.quasistatic(SysIdRoutine.Direction.kForward)
+      .until(isAtMax)
+      .finallyDo(stopMotor)
+      .withTimeout(quasistaticTimeout)
+      .andThen(Commands.waitSeconds(delay))
+      .andThen(routine.quasistatic(SysIdRoutine.Direction.kReverse)
+          .until(isAtMin)
+          .finallyDo(stopMotor)
+          .withTimeout(quasistaticTimeout))
+      .andThen(Commands.waitSeconds(delay))
+      .andThen(routine.dynamic(SysIdRoutine.Direction.kForward)
+          .until(isAtMax)
+          .finallyDo(stopMotor)
+          .withTimeout(dynamicTimeout))
+      .andThen(Commands.waitSeconds(delay))
+      .andThen(routine.dynamic(SysIdRoutine.Direction.kReverse)
+          .until(isAtMin)
+          .finallyDo(stopMotor)
+          .withTimeout(dynamicTimeout));
+}
+```
 
 ---
 
