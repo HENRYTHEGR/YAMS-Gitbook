@@ -474,12 +474,13 @@ public class DoubleFlywheelSubsystem extends SubsystemBase {
   }
 
   /**
-   * Check if both flywheels are at their target velocities.
+   * Check if both flywheels are near their target velocities.
    *
-   * @return true if both flywheels are at target
+   * @param tolerance Acceptable velocity error tolerance
+   * @return true if both flywheels are within tolerance of their target
    */
-  public boolean atTargetVelocity() {
-    return upperFlywheel.atGoal() && lowerFlywheel.atGoal();
+  public boolean atTargetVelocity(AngularVelocity tolerance) {
+    return upperFlywheel.isNear(tolerance) && lowerFlywheel.isNear(tolerance);
   }
 
   /**
