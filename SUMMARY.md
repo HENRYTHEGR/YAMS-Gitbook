@@ -41,3 +41,4 @@
 * [Shooters](details/shooters.md)
 * [Telemetry](details/interactive-blocks.md)
 * [Live Tuning](details/integrations.md)
+* [AdvantageKit Integration](details/advantagekit-integration.md)
