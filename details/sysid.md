@@ -186,6 +186,14 @@ The logging callback runs every robot loop iteration (typically 50Hz). Creating 
 The `Mut*` (mutable) variants allow you to reuse the same object and update its value in-place with `mut_replace()`. This eliminates per-iteration allocations and keeps your robot code running smoothly.
 {% endhint %}
 
+{% hint style="warning" %}
+**Important: `updateTelemetry()` and `simIterate()` in the log callback**
+
+The log callback calls `motor.updateTelemetry()` and `motor.simIterate()` to ensure sensor data (position, velocity) is accurate at the exact moment of logging. This is critical for simulation accuracy.
+
+**When running SysId manually**, you should **temporarily disable or remove** any `updateTelemetry()` and `simIterate()` calls from your subsystem's `periodic()` method. Having these calls in both places can cause duplicate updates per loop iteration, which may produce inconsistent data.
+{% endhint %}
+
 ```java
 import static edu.wpi.first.units.Units.Rotations;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
@@ -228,6 +236,7 @@ public class ManualSysIdSubsystem extends SubsystemBase {
               voltage.in(Volts) / RobotController.getBatteryVoltage()
           ),
           // Log callback - records position, velocity, and voltage
+          // updateTelemetry() and simIterate() ensure sensor data is fresh at logging time
           log -> {
             motor.updateTelemetry();
             motor.simIterate();
