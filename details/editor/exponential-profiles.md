@@ -18,7 +18,7 @@ Motion profiles output a series of intermediate setpoints (position and velocity
 
 ### Trapezoidal Profiles
 
-Trapezoidal profiles are the most common type. They assume constant acceleration/deceleration phases with a cruise phase at maximum velocity. The name comes from the trapezoidal shape of the velocity-time graph.
+Trapezoidal profiles are the most common type. The name comes from the trapezoidal shape of the velocity-time graph.
 
 ```
 Velocity
