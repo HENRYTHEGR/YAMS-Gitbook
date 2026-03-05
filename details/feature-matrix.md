@@ -78,10 +78,14 @@ This page provides a comprehensive comparison of supported `SmartMotorController
 |---------|---------|----------|---------------|------|
 | PID Controller | ✅ | ✅ | ✅ | ✅ |
 | Simulation PID Controller | ✅ | ✅ | ✅ | ✅ |
-| LQR Controller | ✅ | ✅ | ✅ | ✅ |
+| LQR Controller | ⚠️ (RoboRIO) | ⚠️ (RoboRIO) | ⚠️ (RoboRIO) | ⚠️ (RoboRIO) |
 | Simulation LQR Controller | ✅ | ✅ | ✅ | ✅ |
 | Closed Loop Tolerance | ✅ | ✅ | ✅ | ✅ |
 | Control Period Override | ✅ | ✅ | ✅ | ✅ |
+
+{% hint style="warning" %}
+**LQR Controller Execution**: LQR is **not natively supported** by any motor controller hardware. When configured, the closed loop control runs on the **RoboRIO** via `SmartMotorController.iterateClosedLoop()`. This means you must call `iterateClosedLoop()` in your periodic method (mechanism classes handle this automatically). See [LQR Controllers](lqr-controllers.md) for details.
+{% endhint %}
 
 ### Motion Profiles
 
