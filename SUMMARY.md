@@ -7,6 +7,7 @@
 * [Arm](tutorials/arm.md)
 * [Elevator](tutorials/elevator.md)
 * [Shooter/FlyWheels](tutorials/shooter-flywheels.md)
+* [Double FlyWheel](tutorials/double-flywheel.md)
 
 ## How To
 
@@ -29,6 +30,7 @@
 * [Sensors](details/sensors.md)
 * [Limiting Power Consumption](details/limiting-power-consumption.md)
 * [Smart Motor Controllers](details/editor.md)
+* [Motor Controller Feature Matrix](details/feature-matrix.md)
 * [EasyCRT](details/easycrt.md)
 * [Arms](details/arms.md)
 * [Elevators](details/elevators.md)
