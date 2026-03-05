@@ -178,6 +178,14 @@ Modern motor controllers (SparkMax, SparkFlex, TalonFX, etc.) have internal clos
 For SysId, we want **raw, uncompensated motor behavior**. By converting voltage to duty cycle (`voltage / batteryVoltage`) and using `setDutyCycle()`, we bypass the internal controller entirely. This produces cleaner data that more accurately represents the true motor and mechanism dynamics.
 {% endhint %}
 
+{% hint style="info" %}
+**Why use `MutVoltage`, `MutAngle`, and `MutAngularVelocity`?**
+
+The logging callback runs every robot loop iteration (typically 50Hz). Creating new `Voltage`, `Angle`, or `AngularVelocity` objects each iteration would allocate memory on the heap, increasing garbage collection (GC) pressure and potentially causing loop overruns.
+
+The `Mut*` (mutable) variants allow you to reuse the same object and update its value in-place with `mut_replace()`. This eliminates per-iteration allocations and keeps your robot code running smoothly.
+{% endhint %}
+
 ```java
 import static edu.wpi.first.units.Units.Rotations;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
@@ -198,7 +206,8 @@ public class ManualSysIdSubsystem extends SubsystemBase {
 
   private SmartMotorController motor; // Your YAMS SmartMotorController
 
-  // Mutable holders to avoid allocations during logging
+  // Mutable holders for unit types - reused each loop iteration to avoid
+  // allocating new objects on the heap during logging (reduces GC pressure)
   private final MutVoltage m_appliedVoltage = new MutVoltage(0, 0, Volts);
   private final MutAngle m_position = new MutAngle(0, 0, Rotations);
   private final MutAngularVelocity m_velocity = new MutAngularVelocity(0, 0, RotationsPerSecond);
