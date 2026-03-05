@@ -81,11 +81,11 @@ When live tuning, it's important to understand what units each parameter expects
 |-----------|--------|------|-------------|
 | Static Gain | kS | Volts (V) | Voltage to overcome static friction. |
 | Gravity Gain | kG | Volts (V) | Voltage to hold the arm horizontal (at 0°). Actual output is `kG * cos(angle)`. |
-| Velocity Gain | kV | Volts per Radian/Second (V/(rad/s)) | Voltage per unit of target angular velocity. |
-| Acceleration Gain | kA | Volts per Radian/Second² (V/(rad/s²)) | Voltage per unit of target angular acceleration. |
+| Velocity Gain | kV | Volts per Rotation/Second (V/(rot/s)) | Voltage per unit of target angular velocity. |
+| Acceleration Gain | kA | Volts per Rotation/Second² (V/(rot/s²)) | Voltage per unit of target angular acceleration. |
 
-{% hint style="warning" %}
-`ArmFeedforward` uses **Radians** internally for the cosine calculation, regardless of your mechanism's display units.
+{% hint style="info" %}
+In YAMS, `ArmFeedforward` uses **Rotations** for kV and kA units, consistent with other feedforward types. The cosine calculation for gravity compensation is handled internally.
 {% endhint %}
 
 #### ElevatorFeedforward (Elevators, Linear Lifts)
