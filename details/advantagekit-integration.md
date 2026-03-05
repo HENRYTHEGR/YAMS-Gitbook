@@ -807,9 +807,21 @@ public class SwerveSubsystem extends SubsystemBase {
 ### Key Points for Swerve with AdvantageKit
 
 1. **Create an `@AutoLog` inputs class** with module states, positions, gyro, and pose
-2. **Update inputs AFTER `drive.updateTelemetry()`** - the pose estimator updates in `updateTelemetry()`
+2. **Call `updateTelemetry()` BEFORE `updateInputs()`** - the pose estimator and internal state updates in `updateTelemetry()`
 3. **Log desired states and speeds** using `Logger.recordOutput()` for replay debugging
 4. **Call `simIterate()` in `simulationPeriodic()`** for physics simulation
+
+{% hint style="warning" %}
+**Important: Replay Data Scope**
+
+During AdvantageKit log replay, **only data inside the `@AutoLog` inputs classes is mutated**. YAMS's built-in telemetry (published via `withTelemetry()`) is NOT affected by replay - it will show live simulation values, not replayed values.
+
+This means:
+- **Inputs you define** (in `SwerveInputs`, `ArmInputs`, etc.) - Replayed correctly
+- **YAMS telemetry** (from `.withTelemetry("Arm")`) - Shows live sim values during replay
+
+To ensure accurate replay debugging, always pull the data you need into your `@AutoLog` inputs class rather than relying on YAMS telemetry during replay.
+{% endhint %}
 
 ## Alternative Pattern: Direct Subsystem (No IO Layer)
 
@@ -865,9 +877,9 @@ public class ArmSubsystem extends SubsystemBase {
 
   @Override
   public void periodic() {
+    arm.updateTelemetry();  // Always call BEFORE updateInputs
     updateInputs();
     Logger.processInputs("Arm", armInputs);
-    arm.updateTelemetry();
   }
 
   @Override
