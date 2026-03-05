@@ -108,15 +108,15 @@ All Mechanism classes inherit these methods from `SmartMechanism`:
 
 ```java
 // Position setpoints
-void setMechanismPositionSetpoint(Angle angle)      // Rotational position
-void setMeasurementPositionSetpoint(Distance dist)  // Linear position
+void setMechanismPositionSetpoint(Angle angle)      // Rotational position (Arm, Pivot)
+void setMeasurementPositionSetpoint(Distance dist)  // Linear position (Elevator)
 
 // Velocity setpoints
 void setMechanismVelocitySetpoint(AngularVelocity vel)  // Rotational velocity
-void setMeasurementVelocitySetpoint(LinearVelocity vel) // Linear velocity
+void setMeasurementVelocitySetpoint(LinearVelocity vel) // Linear velocity (Elevator, FlyWheel)
 
 // Open loop setpoints
-void setVoltageSetpoint(Voltage volts)              // Voltage control
+void setMechanismVoltageSetpoint(Voltage volts)     // Voltage control
 void setDutyCycleSetpoint(double dutyCycle)         // Duty cycle [-1, 1]
 ```
 
@@ -184,7 +184,7 @@ Not all setpoint methods are supported by all Mechanism classes. Methods that do
 
 | Method | Arm | Pivot | Elevator | FlyWheel |
 |--------|-----|-------|----------|----------|
-| `setVoltageSetpoint(Voltage)` | Yes | Yes | Yes | Yes |
+| `setMechanismVoltageSetpoint(Voltage)` | Yes | Yes | Yes | Yes |
 | `setDutyCycleSetpoint(double)` | Yes | Yes | Yes | Yes |
 
 {% hint style="warning" %}
