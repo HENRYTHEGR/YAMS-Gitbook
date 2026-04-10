@@ -77,8 +77,8 @@ SmartMotorControllerConfig smcConfig = new SmartMotorControllerConfig(this)
 
 At the moment YAMS will only accept external encoders of the same vendor as this is the only vendor-supported way of using them. It is possible for external encoders to not have the same gearing as the rotor to the mechanism or not be a 1:1 to the mechanism so we do provide an external encoder gearing configuration option!
 
-{% hint style="warning" %}
-Absolute encoders cannot go beyond 1 rotation or 360 degrees without wrapping!
+{% hint style="danger" %}
+Absolute encoders cannot go beyond 1 rotation or 360 degrees, even less with discontinuity points!
 
 DO **NOT** USE AN ABSOLUTE ENCODER WITH A GEAR RATIO WITH AN INPUT GREATER THAN 1 UNLESS YOU KNOW WHAT YOU'RE DOING!
 {% endhint %}
@@ -89,7 +89,8 @@ SmartMotorControllerConfig motorConfig = new SmartMotorControllerConfig(this)
       .withExternalEncoderInverted(true)
       .withExternalEncoderGearing(new MechanismGearing(GearBox.fromStages("1:2")))
       .withUseExternalFeedbackEncoder(true)
-      .withExternalEncoderZeroOffset(Degrees.of(0));
+      .withExternalEncoderZeroOffset(Degrees.of(0))
+      .withExternalEncoderDiscontinuityPoint(Degrees.of(180)); // Sets the range of the absolute encoder to [-180, 180]
 ```
 
 ## Follower motors
