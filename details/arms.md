@@ -6,7 +6,7 @@ icon: hand-fist
 
 ## Arm Angles
 
-In accordance with WPILib standards Arm's are at 0deg when they are parallel from the ground, this way the feedforward calculations can be done with the `sin` of the angle.
+In accordance with WPILib standards Arm's are at 0deg when they are parallel from the ground, this way the feedforward calculations can be done with the `cos` of the angle.
 
 ### Create the `ArmConfig`
 
