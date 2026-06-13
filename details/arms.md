@@ -15,7 +15,8 @@ At this point we should have a `SmartMotorController` and a subsystem for our `A
 ```java
 SparkMax                   armMotor    = new SparkMax(1, MotorType.kBrushless);
 SmartMotorControllerConfig motorConfig = new SmartMotorControllerConfig(this)
-      .withClosedLoopController(4, 0, 0, DegreesPerSecond.of(180), DegreesPerSecondPerSecond.of(90))
+      .withClosedLoopController(4, 0, 0)
+      .withTrapezoidalProfile(DegreesPerSecond.of(180), DegreesPerSecondPerSecond.of(90))
       .withFeedforward(new ArmFeedforward(0, 0, 0, 0))
       .withSoftLimit(Degrees.of(-30), Degrees.of(100))
       .withGearing(new MechanismGearing(GearBox.fromReductionStages(3, 4)))
