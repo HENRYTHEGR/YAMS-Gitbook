@@ -434,7 +434,11 @@ public class ExampleSubsystem extends SubsystemBase {
   .withIdleMode(MotorMode.BRAKE)
   .withStatorCurrentLimit(Amps.of(40))
   .withClosedLoopRampRate(Seconds.of(0.25))
-  .withOpenLoopRampRate(Seconds.of(0.25));
+  .withOpenLoopRampRate(Seconds.of(0.25))
+<strong>  // Starting position is where your arm starts</strong>
+<strong>  .withStartingPosition(Degrees.of(-5))</strong>
+<strong>  // Soft limit is applied to the SmartMotorControllers PID</strong>
+<strong>  .withSoftLimits(Degrees.of(-20), Degrees.of(10));</strong>
 
   // Vendor motor controller object
   private SparkMax spark = new SparkMax(4, MotorType.kBrushless);
@@ -443,12 +447,8 @@ public class ExampleSubsystem extends SubsystemBase {
   private SmartMotorController sparkSmartMotorController = new SparkWrapper(spark, DCMotor.getNEO(1), smcConfig);
 
 <strong>  private ArmConfig armCfg = new ArmConfig(sparkSmartMotorController)
-</strong><strong>  // Soft limit is applied to the SmartMotorControllers PID
-</strong><strong>  .withSoftLimits(Degrees.of(-20), Degrees.of(10))
 </strong><strong>  // Hard limit is applied to the simulation.
-</strong><strong>  .withHardLimit(Degrees.of(-30), Degrees.of(40))
-</strong><strong>  // Starting position is where your arm starts
-</strong><strong>  .withStartingPosition(Degrees.of(-5))
+</strong><strong>  .withHardLimits(Degrees.of(-30), Degrees.of(40))
 </strong><strong>  // Length and mass of your arm for sim.
 </strong><strong>  .withLength(Feet.of(3))
 </strong><strong>  .withMass(Pounds.of(1))
@@ -611,11 +611,7 @@ public class ExampleSubsystem extends SubsystemBase {
 </strong><strong>   */
 </strong><strong>  public Command set(double dutycycle) { return arm.set(dutycycle);}
 </strong>
-<strong>  /**
-</strong><strong>   * Run sysId on the {@link Arm}
-</strong><strong>   */
-</strong><strong>  public Command sysId() { return arm.sysId(Volts.of(7), Volts.of(2).per(Second), Seconds.of(4));}
-</strong>
+
   /** Creates a new ExampleSubsystem. */
   public ExampleSubsystem() {}
 
