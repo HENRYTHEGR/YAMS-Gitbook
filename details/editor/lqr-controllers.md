@@ -310,7 +310,11 @@ public class LQRArmSubsystem extends SubsystemBase {
             .withTelemetry("LQRArm", TelemetryVerbosity.HIGH);
         
         motor = new TalonFXWrapper(talonFX, dcMotor, config);
-        arm = new Arm(motor);
+
+        ArmConfig armConfig = new ArmConfig()
+            .withTelemetry("LQRArm", TelemetryVerbosity.HIGH);
+
+        arm = new Arm(armConfig, motor);
     }
     
     public Command goToAngle(Angle target) {

@@ -1,78 +1,175 @@
 # How do I use absolute encoders on my Arm?
 
-## What are absolute encoders?
+Absolute encoders report the physical position of a mechanism within a single rotation and retain that reading across power cycles and reboots. On an Arm (or Pivot) mechanism this means the robot always knows where the arm is the moment it powers on — no homing routine, no encoder drift from brownouts or e-stops.
 
-Absolute Encoders are encoders which read one rotation and persists between power cycles and reboots.&#x20;
+## Supported encoder types
 
-{% embed url="https://www.revrobotics.com/rev-11-1271/" %}
+Each `SmartMotorController` wrapper only accepts the encoders from its own vendor ecosystem. Passing the wrong encoder type will throw an exception at runtime.
 
-{% embed url="https://store.ctr-electronics.com/products/cancoder" %}
-
-{% embed url="https://store.ctr-electronics.com/products/wcp-throughbore-encoder" %}
-
-## External Encoders&#x20;
-
-`SmartMotorController` s   are only able to use the same encoders as the brand of the `SmartMotorController`. If you are using the wrong brand YAMS will through an exception.
-
-## Limitations of Absolute Encoders
-
-Absolute encoders can only read from 0 rotations to 1 rotation. If you traverse the discontinuity point it will wrap back around. It does not travel past 1!
+| Wrapper | Supported absolute encoders |
+|---|---|
+| `SparkWrapper` (SparkMax / SparkFlex) | `SparkAbsoluteEncoder` (`armMotor.getAbsoluteEncoder()`) |
+| `TalonFXWrapper` (TalonFX / Kraken) | `CANcoder`, `CANdi` |
+| `TalonFXSWrapper` (TalonFXS / Minion) | `CANcoder`, `CANdi` |
 
 {% stepper %}
 {% step %}
-### Check your inversions!
+### Check your inversion
 
-Using the hardware client of the vendor, apply positive power and graph the position of your absolute encoder. Your absolute encoder should increase with positive power
+Using the vendor hardware client (REV Hardware Client or Phoenix Tuner X), apply positive power to the motor and graph the absolute encoder position. The position should **increase** as the motor turns in the positive direction.
 
-If it needs to be inverted you can use `SmartMotorControllerConfig.withExternalEncoderInverted(true)`
+If it decreases, invert the encoder reading:
+
+```java
+.withExternalEncoderInverted(true)
+```
 {% endstep %}
 
 {% step %}
-### Check your gear ratio and mount!
+### Check your gear ratio and mount
 
-Using the vendor hardware client ensure that the absolute encoder **NEVER** goes beyond 1 rotation. You will see that it goes beyond 1 rotation by the position wraps around from 1rotation to 0rotations. If this happens more than once the gear ratio is invalid and your `SmartMotorController` cannot use the absolute encoder as the primary feedback device.
+The absolute encoder must complete **at most one full rotation** across the entire range of motion of the arm. Confirm this in the hardware client by moving the arm through its full travel and watching the encoder position — it must never wrap from 1 rotation back to 0 more than once.
 
-You can use `SmartMotorControllerConfig.withExternalEncoderGearing(1.0)` to set the reduction gear ratio on the absolute encoder.
+Use `.withExternalEncoderGearing(1.0)` if the encoder is mounted directly on the mechanism shaft. If the encoder is driven through a reduction, pass the encoder-to-mechanism ratio.
 
 {% hint style="warning" %}
-This could also be caused when the absolute encoders discontinuity point is within the range of movement, to solve this take the absolute encoder off and rotate the bearing to ensure it never reaches that discontinuity point during the range of motion.
+If the gear ratio causes the encoder to exceed 1 rotation during the arm's range of motion, the encoder position will wrap unpredictably and **cannot** be used as the primary PID feedback device. Either remount the encoder closer to the mechanism output shaft or change the reduction so the encoder never exceeds 1 rotation.
 {% endhint %}
 {% endstep %}
 
 {% step %}
-### Find your zero
+### Set the discontinuity point
 
-Using the hardware client of the vendor find the zero value of the absolute encoder corresponding the the arm being completely horizontal from the ground.
+An absolute encoder wraps at its **discontinuity point** — the angle at which the reading jumps from its maximum value back to zero (or vice versa). There are two supported ranges:
 
-You can set the horizontal zero using `SmartMotorControllerConfig.withExternalEncoderZeroOffset(Degrees.of(offset_degrees))`&#x20;
+- `Rotations.of(1.0)` — range is **\[0, 1\]**; the encoder wraps at 1 rotation back to 0
+- `Rotations.of(0.5)` — range is **\[-0.5, 0.5\]**; the encoder wraps at ±0.5 rotations
+
+```java
+.withExternalEncoderDiscontinuityPoint(Rotations.of(1.0))  // [0, 1] range
+// or
+.withExternalEncoderDiscontinuityPoint(Rotations.of(0.5))  // [-0.5, 0.5] range
+```
+
+{% hint style="info" %}
+`SparkWrapper` **requires** the discontinuity point to be set explicitly. For `TalonFXWrapper` and `TalonFXSWrapper` it is optional but recommended for clarity.
+{% endhint %}
+
+{% hint style="warning" %}
+If the arm's physical range of motion crosses the discontinuity point, the position will jump mid-travel and break closed-loop control. If this happens, remove the encoder, rotate the bearing so the discontinuity point falls outside the arm's travel range, and remount.
+{% endhint %}
 {% endstep %}
 
 {% step %}
-### Bring it all together!
+### Find your zero offset
 
-<pre class="language-java"><code class="lang-java">private final SparkMax                   armMotor         = new SparkMax(1, MotorType.kBrushless);
+Move the arm to exactly horizontal (0° from horizontal, parallel to the ground). Read the raw encoder position in the hardware client — that value is your zero offset.
 
-private final SmartMotorControllerConfig motorConfig = new SmartMotorControllerConfig(this)
-      .withClosedLoopController(4, 0, 0)
-      .withSoftLimit(Degrees.of(-30), Degrees.of(100))
-      .withGearing(new MechanismGearing(GearBox.fromReductionStages(3, 4)))
-      .withIdleMode(MotorMode.BRAKE)
-      .withTelemetry("ArmMotor", TelemetryVerbosity.HIGH)
-      .withStatorCurrentLimit(Amps.of(40))
-      .withMotorInverted(false)
-      .withClosedLoopRampRate(Seconds.of(0.25))
-      .withOpenLoopRampRate(Seconds.of(0.25))
-      .withFeedforward(new ArmFeedforward(0, 0, 0, 0))
-      .withControlMode(ControlMode.CLOSED_LOOP)
-<strong>      .withExternalEncoder(armMotor.getAbsoluteEncoder())
-</strong><strong>      .withExternalEncoderInverted(false)
-</strong><strong>      .withExternalEncoderGearing(1)
-</strong><strong>      .withExternalEncoderZeroOffset(Degrees.of(33.25))
-</strong><strong>      .withUseExternalFeedbackEncoder(true);
-</strong>      
-private final SmartMotorController       motor            = new SparkWrapper(armMotor,
-                                                                               DCMotor.getNEO(1),
-                                                                               motorConfig);
-</code></pre>
+```java
+.withExternalEncoderZeroOffset(Degrees.of(33.25))  // replace with your measured value
+```
+
+Negative offsets are automatically converted to their positive equivalent (1 rotation is added internally).
+{% endstep %}
+
+{% step %}
+### Configure the simulation starting position
+
+Simulation has no physical encoder, so the absolute encoder reading is unavailable in sim. Use `.withSimStartingPosition()` to tell the simulator where the arm starts. On a real robot this value is ignored — the true encoder reading is always used.
+
+```java
+.withSimStartingPosition(Degrees.of(0))  // arm starts horizontal in sim
+```
 {% endstep %}
 {% endstepper %}
+
+***
+
+## Complete examples
+
+### SparkMax + SparkAbsoluteEncoder
+
+```java
+private final SparkMax armMotor = new SparkMax(1, MotorType.kBrushless);
+
+private final SmartMotorControllerConfig motorConfig = new SmartMotorControllerConfig(this)
+    .withControlMode(ControlMode.CLOSED_LOOP)
+    .withClosedLoopController(4, 0, 0)
+    .withTrapezoidalProfile(DegreesPerSecond.of(180), DegreesPerSecondPerSecond.of(90))
+    .withFeedforward(new ArmFeedforward(0, 0, 0, 0))
+    .withSoftLimits(Degrees.of(-30), Degrees.of(100))
+    .withGearing(new MechanismGearing(GearBox.fromReductionStages(3, 4)))
+    .withIdleMode(MotorMode.BRAKE)
+    .withTelemetry("ArmMotor", TelemetryVerbosity.HIGH)
+    .withStatorCurrentLimit(Amps.of(40))
+    .withExternalEncoder(armMotor.getAbsoluteEncoder())
+    .withExternalEncoderInverted(false)
+    .withExternalEncoderGearing(1.0)
+    .withExternalEncoderZeroOffset(Degrees.of(33.25))
+    .withExternalEncoderDiscontinuityPoint(Rotations.of(1.0))  // [0, 1] range — required for SparkWrapper
+    .withUseExternalFeedbackEncoder(true)
+    .withSimStartingPosition(Degrees.of(0));
+
+private final SmartMotorController smc = new SparkWrapper(armMotor, DCMotor.getNEO(1), motorConfig);
+```
+
+### TalonFX + CANcoder
+
+```java
+private final TalonFX armMotor = new TalonFX(1);
+private final CANcoder cancoder = new CANcoder(2);
+
+private final SmartMotorControllerConfig motorConfig = new SmartMotorControllerConfig(this)
+    .withControlMode(ControlMode.CLOSED_LOOP)
+    .withClosedLoopController(4, 0, 0)
+    .withTrapezoidalProfile(DegreesPerSecond.of(180), DegreesPerSecondPerSecond.of(90))
+    .withFeedforward(new ArmFeedforward(0, 0, 0, 0))
+    .withSoftLimits(Degrees.of(-30), Degrees.of(100))
+    .withGearing(new MechanismGearing(GearBox.fromReductionStages(3, 4)))
+    .withIdleMode(MotorMode.BRAKE)
+    .withTelemetry("ArmMotor", TelemetryVerbosity.HIGH)
+    .withStatorCurrentLimit(Amps.of(40))
+    .withExternalEncoder(cancoder)
+    .withExternalEncoderInverted(false)
+    .withExternalEncoderGearing(1.0)
+    .withExternalEncoderZeroOffset(Degrees.of(33.25))
+    .withExternalEncoderDiscontinuityPoint(Rotations.of(0.5))  // [-0.5, 0.5] range
+    .withUseExternalFeedbackEncoder(true)
+    .withSimStartingPosition(Degrees.of(0));
+
+private final SmartMotorController smc = new TalonFXWrapper(armMotor, DCMotor.getKrakenX60(1), motorConfig);
+```
+
+### TalonFXS + CANdi
+
+The `CANdi` connects to the TalonFXS via its PWM port and is treated the same as a CANcoder for configuration purposes.
+
+```java
+private final TalonFXS armMotor = new TalonFXS(1);
+private final CANdi candi = new CANdi(2);
+
+private final SmartMotorControllerConfig motorConfig = new SmartMotorControllerConfig(this)
+    .withControlMode(ControlMode.CLOSED_LOOP)
+    .withClosedLoopController(4, 0, 0)
+    .withTrapezoidalProfile(DegreesPerSecond.of(180), DegreesPerSecondPerSecond.of(90))
+    .withFeedforward(new ArmFeedforward(0, 0, 0, 0))
+    .withSoftLimits(Degrees.of(-30), Degrees.of(100))
+    .withGearing(new MechanismGearing(GearBox.fromReductionStages(3, 4)))
+    .withIdleMode(MotorMode.BRAKE)
+    .withTelemetry("ArmMotor", TelemetryVerbosity.HIGH)
+    .withStatorCurrentLimit(Amps.of(40))
+    .withExternalEncoder(candi)
+    .withExternalEncoderInverted(false)
+    .withExternalEncoderGearing(1.0)
+    .withExternalEncoderZeroOffset(Degrees.of(33.25))
+    .withUseExternalFeedbackEncoder(true)
+    .withSimStartingPosition(Degrees.of(0));
+
+private final SmartMotorController smc = new TalonFXSWrapper(armMotor, DCMotor.getKrakenX60(1), motorConfig);
+```
+
+***
+
+## Using absolute encoders on a Pivot
+
+The exact same external encoder setup described above works identically for `Pivot` mechanisms (turrets, wrists, and any other single-axis rotational mechanism). The configuration API and all five setup steps are unchanged — just substitute your `PivotConfig` and the appropriate wrapper.

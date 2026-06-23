@@ -30,14 +30,15 @@ SmartMotorControllerConfig motorConfig = new SmartMotorControllerConfig(this)
       .withOpenLoopRampRate(Seconds.of(0.25))
       .withContinuousWrapping(Degrees.of(0), Degrees.of(360))// Wrapping enabled bc the pivot can spin infinitely
       .withStartingPosition(Degrees.of(0)) // Starting position of the Pivot
-      .withMOI(Meters.of(0.25), Pounds.of(4)); // MOI Calculation
+      .withMomentOfInertia(Meters.of(0.25), Pounds.of(4)); // MOI Calculation
 SmartMotorController       motor       = new TalonFXSWrapper(turretMotor,
                                                              DCMotor.getNEO(1),
                                                              motorConfig);
 
-PivotConfig                m_config         = new PivotConfig(motor) 
-      .withHardLimit(Degrees.of(0), Degrees.of(720)) // Hard limit bc wiring prevents infinite spinning
+PivotConfig                m_config         = new PivotConfig() 
+      .withHardLimits(Degrees.of(0), Degrees.of(720)) // Hard limit bc wiring prevents infinite spinning
       .withTelemetry("PivotExample", TelemetryVerbosity.HIGH); // Telemetry
+Pivot                      m_pivot          = new Pivot(m_config, motor);
 ```
 
 ## Hard Limits
@@ -45,15 +46,17 @@ PivotConfig                m_config         = new PivotConfig(motor)
 Hard limits are useful for simulation to emulate hard limits that may or may not be imposed on your robot. It is best to give this a wide range if your mechanism is undefined that way you can see exactly what might happen and notice "that could break the robot" beforehand.
 
 ```java
-PivotConfig m_config = new PivotConfig(motor)
-      .withHardLimit(Degrees.of(0), Degrees.of(720)) // Hard limit bc wiring prevents infinite spinning
+PivotConfig m_config = new PivotConfig()
+      .withHardLimits(Degrees.of(0), Degrees.of(720)) // Hard limit bc wiring prevents infinite spinning
 ```
 
 ## MOI
 
 The moment of inertia is only used in simulation to estimate the behavior of the Pivot. If you have your MOI similar to the real mechanism than the PID and FF might be similar, however this is unlikely and you will probably have to [set a sim only PID and FF](editor/simulation-only-pid-+-feedforward.md).
 
+MOI is configured on `SmartMotorControllerConfig` via `.withMomentOfInertia(Distance, Mass)`.
+
 ```java
-PivotConfig m_config = new PivotConfig(motor)
-      .withMOI(Meters.of(0.25), Pounds.of(4)); // MOI Calculation
+SmartMotorControllerConfig motorConfig = new SmartMotorControllerConfig(this)
+      .withMomentOfInertia(Meters.of(0.25), Pounds.of(4)); // MOI Calculation
 ```

@@ -291,22 +291,20 @@ public class ElevatorSubsystem extends SubsystemBase {
 
     private final Distance chainPitch = Inches.of(0.25);
     private final int toothCount = 22;
-    private final Distance circumference = chainPitch.times(toothCount);
-    private final Distance drumRadius = circumference.div(2 * Math.PI);
     private final Mass carriageMass = Pounds.of(15);
     private final DCMotor motors = DCMotor.getNEO(2);
     private final MechanismGearing gearing = new MechanismGearing(GearBox.fromReductionStages(5, 4));
 
     private final SmartMotorControllerConfig motorConfig = new SmartMotorControllerConfig(this)
         .withControlMode(ControlMode.CLOSED_LOOP)
-        .withMechanismCircumference(circumference)
+        .withDrumRadius(chainPitch, toothCount)
         .withClosedLoopController(new ExponentialProfilePIDController(
             15, 0, 0,
             ExponentialProfilePIDController.createElevatorConstraints(
                 Volts.of(10), // Conservative voltage for testing
                 motors,
                 carriageMass,
-                drumRadius,
+                chainPitch.times(toothCount).div(2 * Math.PI),
                 gearing
             )
         ))
@@ -329,12 +327,13 @@ public class ElevatorSubsystem extends SubsystemBase {
     );
 
     private final Elevator elevator = new Elevator(
-        new ElevatorConfig(motor)
+        new ElevatorConfig()
             .withSoftLimits(Meters.of(0), Meters.of(1.2))
-            .withHardLimit(Meters.of(-0.05), Meters.of(1.3))
+            .withHardLimits(Meters.of(-0.05), Meters.of(1.3))
             .withStartingPosition(Meters.of(0))
-            .withMass(carriageMass)
-            .withTelemetry("Elevator", TelemetryVerbosity.HIGH)
+            .withCarriageWeight(carriageMass)
+            .withTelemetry("Elevator", TelemetryVerbosity.HIGH),
+        motor
     );
 
     public Command goToHeight(Distance height) {

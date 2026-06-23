@@ -8,9 +8,9 @@ description: >-
 
 ## Subsystems with `SmartMotorController`'s
 
-Subsystems given when you create the `SmartMotorControllerConfig` are only used for YAMS generated commands. This means that if you're using a YAMS generated command like `SmartMotorController.sysId()` or `Arm.setAngle` or `Elevator.setHeight` that command will be the **ONLY** command allowed to run on that subsystems.&#x20;
+Subsystems given when you create the `SmartMotorControllerConfig` are only used for YAMS generated commands. This means that if you're using a YAMS generated command like `SmartMotorController.sysId()` or `Arm.run` or `Elevator.run` that command will be the **ONLY** command allowed to run on that subsystems.&#x20;
 
-## Controlling an Elevator without Elevator.setHeight()
+## Controlling an Elevator without Elevator.run()
 
 IF you know how to use Command Based Programming well enough you can create your own commands and control the `SmartMotorController` without the Mechanism but remember to create the Mechanism and Mechanism config because it will modify and re-apply the `SmartMotorControllerConfig` &#x20;
 
@@ -47,8 +47,8 @@ An example of this for an Elevator would be as follows
   
   private SmartMotorControllerConfig leftSmcConfig = new SmartMotorControllerConfig(this)
   .withControlMode(ControlMode.CLOSED_LOOP)
-  // Mechanism Circumference is the distance traveled by each mechanism rotation converting rotations to meters.
-  .withMechanismCircumference(drumCircumference)
+  // Elevator drum radius: derived from chain pitch and tooth count.
+  .withDrumRadius(drumRadius)
   // Feedback Constants (PID Constants)
   .withClosedLoopController(kP, kI, kD)
   .withTrapezoidalProfile(maxVel, maxAccel)
@@ -71,8 +71,8 @@ An example of this for an Elevator would be as follows
   
   private SmartMotorControllerConfig rightSmcConfig = new SmartMotorControllerConfig(this)
   .withControlMode(ControlMode.CLOSED_LOOP)
-  // Mechanism Circumference is the distance traveled by each mechanism rotation converting rotations to meters.
-  .withMechanismCircumference(drumCircumference)
+  // Elevator drum radius: derived from chain pitch and tooth count.
+  .withDrumRadius(drumRadius)
   // Feedback Constants (PID Constants)
   .withClosedLoopController(kP, kI, kD)
   .withTrapezoidalProfile(maxVel, maxAccel)
@@ -103,14 +103,14 @@ An example of this for an Elevator would be as follows
   
   // Include this only if you want a pretty sim
   /*
-  private ElevatorConfig elevconfig = new ElevatorConfig(sparkSmartMotorController)
+  private ElevatorConfig elevconfig = new ElevatorConfig()
       .withStartingHeight(Meters.of(0.5))
       .withHardLimits(Meters.of(0), Meters.of(3))
       .withTelemetry("Elevator", TelemetryVerbosity.HIGH)
-      .withMass(Pounds.of(16));
+      .withCarriageWeight(Pounds.of(16));
 
   // Elevator Mechanism
-  private Elevator elevator = new Elevator(elevconfig);
+  private Elevator elevator = new Elevator(elevconfig, leftSparkSmartMotorController);
   */
   
   /**

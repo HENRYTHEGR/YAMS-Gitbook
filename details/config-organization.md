@@ -61,10 +61,7 @@ public final class Constants {
     public static final ArmConfig ARM_CONFIG = 
         new ArmConfig()  // No SmartMotorController yet!
             .withLength(Inches.of(18))
-            .withMass(Pounds.of(5))
-            .withHardLimit(Rotations.of(-0.3), Rotations.of(0.3))
-            .withSoftLimits(Rotations.of(-0.25), Rotations.of(0.25))
-            .withStartingPosition(Rotations.of(0))
+            .withHardLimits(Rotations.of(-0.3), Rotations.of(0.3))
             .withTelemetry("Arm", TelemetryVerbosity.HIGH);
   }
   
@@ -74,18 +71,15 @@ public final class Constants {
     public static final SmartMotorControllerConfig SMC_CONFIG = 
         new SmartMotorControllerConfig()
             .withGearing(new MechanismGearing(GearBox.fromReductionStages(5, 4)))
-            .withMechanismCircumference(Inches.of(1.5 * Math.PI))
+            .withDrumRadius(Inches.of(0.75))
             .withClosedLoopController(10, 0, 0.5)
             .withFeedforward(new ElevatorFeedforward(0.1, 0.2, 0.5, 0.01))
             .withTrapezoidalProfile(MetersPerSecond.of(1.0), MetersPerSecondPerSecond.of(2.0));
     
     public static final ElevatorConfig ELEVATOR_CONFIG = 
         new ElevatorConfig()
-            .withDrumRadius(Inches.of(0.75))
-            .withMass(Pounds.of(10))
+            .withCarriageWeight(Pounds.of(10))
             .withHardLimits(Meters.of(0), Meters.of(1.5))
-            .withSoftLimits(Meters.of(0.02), Meters.of(1.2))
-            .withStartingHeight(Meters.of(0.5))
             .withTelemetry("Elevator", TelemetryVerbosity.HIGH);
   }
   
@@ -101,8 +95,6 @@ public final class Constants {
     public static final FlyWheelConfig FLYWHEEL_CONFIG = 
         new FlyWheelConfig()
             .withDiameter(Inches.of(4))
-            .withMass(Pounds.of(0.5))
-            .withSoftLimit(RPM.of(0), RPM.of(6000))
             .withTelemetry("Shooter", TelemetryVerbosity.HIGH);
   }
 }
@@ -127,11 +119,10 @@ public class ArmSubsystem extends SubsystemBase {
         smcConfig
     );
     
-    // Bind ArmConfig to the SmartMotorController
-    ArmConfig armConfig = ArmConstants.ARM_CONFIG
-        .withSmartMotorController(smc);
+    // Clone ArmConfig and pass smc to the mechanism constructor
+    ArmConfig armConfig = ArmConstants.ARM_CONFIG.clone();
     
-    this.arm = new Arm(armConfig);
+    this.arm = new Arm(armConfig, smc);
   }
   
   // Commands and business logic only - no config clutter!
@@ -187,10 +178,7 @@ public final class Constants {
     public static final ArmConfig ARM_CONFIG = 
         new ArmConfig()
             .withLength(Inches.of(18))
-            .withMass(Pounds.of(5))
-            .withHardLimit(Rotations.of(-0.3), Rotations.of(0.3))
-            .withSoftLimits(Rotations.of(-0.25), Rotations.of(0.25))
-            .withStartingPosition(Rotations.of(0))
+            .withHardLimits(Rotations.of(-0.3), Rotations.of(0.3))
             .withTelemetry("Arm", TelemetryVerbosity.HIGH);
   }
 
@@ -202,7 +190,7 @@ public final class Constants {
     public static final SmartMotorControllerConfig SMC_CONFIG = 
         new SmartMotorControllerConfig()
             .withGearing(new MechanismGearing(GearBox.fromReductionStages(5, 4)))
-            .withMechanismCircumference(Inches.of(1.5 * Math.PI))
+            .withDrumRadius(Inches.of(0.75))
             .withClosedLoopController(10, 0, 0.5)
             .withFeedforward(new ElevatorFeedforward(0.1, 0.2, 0.5, 0.01))
             .withTrapezoidalProfile(MetersPerSecond.of(1.0), MetersPerSecondPerSecond.of(2.0))
@@ -210,11 +198,8 @@ public final class Constants {
     
     public static final ElevatorConfig ELEVATOR_CONFIG = 
         new ElevatorConfig()
-            .withDrumRadius(Inches.of(0.75))
-            .withMass(Pounds.of(10))
+            .withCarriageWeight(Pounds.of(10))
             .withHardLimits(Meters.of(0), Meters.of(1.5))
-            .withSoftLimits(Meters.of(0.02), Meters.of(1.2))
-            .withStartingHeight(Meters.of(0.5))
             .withTelemetry("Elevator", TelemetryVerbosity.HIGH);
   }
 
@@ -234,8 +219,6 @@ public final class Constants {
     public static final FlyWheelConfig FLYWHEEL_CONFIG = 
         new FlyWheelConfig()
             .withDiameter(Inches.of(4))
-            .withMass(Pounds.of(0.5))
-            .withSoftLimit(RPM.of(0), RPM.of(6000))
             .withTelemetry("Shooter", TelemetryVerbosity.HIGH);
   }
 }
@@ -273,12 +256,11 @@ public class ArmSubsystem extends SubsystemBase {
         smcConfig
     );
 
-    // Step 3: Bind ArmConfig to SmartMotorController
-    ArmConfig armConfig = ArmConstants.ARM_CONFIG
-        .withSmartMotorController(smc);
+    // Step 3: Clone ArmConfig and pass smc to the mechanism constructor
+    ArmConfig armConfig = ArmConstants.ARM_CONFIG.clone();
 
     // Step 4: Create Arm mechanism
-    this.arm = new Arm(armConfig);
+    this.arm = new Arm(armConfig, smc);
   }
 
   // ==================== COMMANDS ====================
@@ -322,7 +304,7 @@ frc/robot/
 ```
 
 {% hint style="info" %}
-**Important**: When using this pattern, you **must** call `.withSubsystem()` before passing the config to a `SmartMotorController`, and `.withSmartMotorController()` before passing to a Mechanism class. YAMS will throw an exception if you forget.
+**Important**: When using this pattern, you **must** call `.withSubsystem()` before passing the `SmartMotorControllerConfig` to a `SmartMotorController`. Pass the `SmartMotorController` directly as the second argument to the mechanism constructor (e.g., `new Arm(armConfig, smc)`).
 {% endhint %}
 
 ## When NOT to Use This Pattern

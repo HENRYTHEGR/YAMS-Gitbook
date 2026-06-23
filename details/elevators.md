@@ -11,8 +11,8 @@ Given the [tutorial](../tutorials/elevator.md#create-a-smartmotorcontrollerconfi
 ```java
 SmartMotorControllerConfig smcConfig = new SmartMotorControllerConfig(this)
   .withControlMode(ControlMode.CLOSED_LOOP)
-  // Mechanism Circumference is the distance traveled by each mechanism rotation converting rotations to meters.
-  .withMechanismCircumference(Meters.of(Inches.of(0.25).in(Meters) * 22))
+  // Drum radius is required for elevators. Chain-driven: specify chain pitch and tooth count.
+  .withDrumRadius(Inches.of(0.25), 22)
   // Feedback Constants (PID Constants)
   .withClosedLoopController(4, 0, 0)
   .withTrapezoidalProfile(MetersPerSecond.of(0.5), MetersPerSecondPerSecond.of(0.5))
@@ -39,19 +39,21 @@ SparkMax spark = new SparkMax(4, MotorType.kBrushless);
 // Create our SmartMotorController from our Spark and config with the NEO.
 SmartMotorController sparkSmartMotorController = new SparkWrapper(spark, DCMotor.getNEO(1), smcConfig);
 
-ElevatorConfig elevconfig = new ElevatorConfig(sparkSmartMotorController)
+ElevatorConfig elevconfig = new ElevatorConfig()
       .withHardLimits(Meters.of(0), Meters.of(3)) // Hard limits defined
       .withTelemetry("Elevator", TelemetryVerbosity.HIGH) // Telemetry Name
-      .withMass(Pounds.of(16)); // Mass of the carraige
+      .withCarriageWeight(Pounds.of(16)); // Mass of the carriage
+
+Elevator m_elevator = new Elevator(elevconfig, sparkSmartMotorController);
 ```
 
-## Mass
+## Carriage Weight
 
-The mass defined `.withMass` is used for simulation of the elevator. The mass given should be the carriage weight. Any changes in Mass will require a retuning of the PID and FF, and could necessitate a [sim only PID and FF](editor/simulation-only-pid-+-feedforward.md) to maintain an easy comparison.
+The carriage weight defined via `.withCarriageWeight` is used for simulation of the elevator. The weight given should be the carriage weight. Any changes in carriage weight will require a retuning of the PID and FF, and could necessitate a [sim only PID and FF](editor/simulation-only-pid-+-feedforward.md) to maintain an easy comparison.
 
 ```java
-ElevatorConfig elevconfig = new ElevatorConfig(sparkSmartMotorController)
-      .withMass(Pounds.of(16)); // Weight of the carriage.
+ElevatorConfig elevconfig = new ElevatorConfig()
+      .withCarriageWeight(Pounds.of(16)); // Weight of the carriage.
 ```
 
 ## Cascading Elevators
@@ -69,7 +71,7 @@ new MechanismGearing(GearBox.fromReductionStages(3, 4)).div(2);
 A linear slide is still an elevator! Just with an angle of 0deg! You can set the angle of an Elevator with `.withAngle`
 
 ```java
-ElevatorConfig elevconfig = new ElevatorConfig(sparkSmartMotorController)
+ElevatorConfig elevconfig = new ElevatorConfig()
       .withAngle(Degrees.of(0)); // Parallel to the ground, linear slide.
 ```
 
@@ -87,7 +89,7 @@ Hard limits are the simulation maximum boundaries.
 ```java
 SmartMotorControllerConfig config = config.withSoftLimits(Meters.of(0), Meters.of(3)); // Soft limits
 ...
-ElevatorConfig elevconfig = new ElevatorConfig(sparkSmartMotorController)
+ElevatorConfig elevconfig = new ElevatorConfig()
       .withHardLimits(Meters.of(0), Meters.of(3)) // Hard limits defined 
 ```
 

@@ -446,17 +446,16 @@ public class ExampleSubsystem extends SubsystemBase {
   // Create our SmartMotorController from our Spark and config with the NEO.
   private SmartMotorController sparkSmartMotorController = new SparkWrapper(spark, DCMotor.getNEO(1), smcConfig);
 
-<strong>  private ArmConfig armCfg = new ArmConfig(sparkSmartMotorController)
+<strong>  private ArmConfig armCfg = new ArmConfig()
 </strong><strong>  // Hard limit is applied to the simulation.
 </strong><strong>  .withHardLimits(Degrees.of(-30), Degrees.of(40))
 </strong><strong>  // Length and mass of your arm for sim.
 </strong><strong>  .withLength(Feet.of(3))
-</strong><strong>  .withMass(Pounds.of(1))
 </strong><strong>  // Telemetry name and verbosity for the arm.
 </strong><strong>  .withTelemetry("Arm", TelemetryVerbosity.HIGH);
 </strong>
 <strong>  // Arm Mechanism
-</strong><strong>  private Arm arm = new Arm(armCfg);
+</strong><strong>  private Arm arm = new Arm(armCfg, sparkSmartMotorController);
 </strong>
   /** Creates a new ExampleSubsystem. */
   public ExampleSubsystem() {}
@@ -568,36 +567,35 @@ public class ExampleSubsystem extends SubsystemBase {
   // Create our SmartMotorController from our Spark and config with the NEO.
   private SmartMotorController sparkSmartMotorController = new SparkWrapper(spark, DCMotor.getNEO(1), smcConfig);
 
-  private ArmConfig armCfg = new ArmConfig(sparkSmartMotorController)
+  private ArmConfig armCfg = new ArmConfig()
   // Soft limit is applied to the SmartMotorControllers PID
   .withSoftLimits(Degrees.of(-20), Degrees.of(10))
   // Hard limit is applied to the simulation.
-  .withHardLimit(Degrees.of(-30), Degrees.of(40))
+  .withHardLimits(Degrees.of(-30), Degrees.of(40))
   // Starting position is where your arm starts
   .withStartingPosition(Degrees.of(-5))
   // Length and mass of your arm for sim.
   .withLength(Feet.of(3))
-  .withMass(Pounds.of(1))
   // Telemetry name and verbosity for the arm.
   .withTelemetry("Arm", TelemetryVerbosity.HIGH);
 
   // Arm Mechanism
-  private Arm arm = new Arm(armCfg);
+  private Arm arm = new Arm(armCfg, sparkSmartMotorController);
 
 <strong>  /**
-</strong><strong>   * Set the angle of the arm, does not stop when the arm reaches the setpoint.
+</strong><strong>   * Run the arm to the given angle, does not stop when the arm reaches the setpoint.
 </strong><strong>   * @param angle Angle to go to.
 </strong><strong>   * @return A command.
 </strong><strong>   */
-</strong><strong>  public Command setAngle(Angle angle) { return arm.run(angle);}
+</strong><strong>  public Command run(Angle angle) { return arm.run(angle);}
 </strong>  
 <strong>  /**
-</strong><strong>   * Set the angle of the arm, ends the command but does not stop the arm when the arm reaches the setpoint.
+</strong><strong>   * Run the arm to the given angle, ends the command when the arm reaches the setpoint within tolerance.
 </strong><strong>   * @param angle Angle to go to.
 </strong><strong>   * @param tolerance Angle tolerance for completion.
 </strong><strong>   * @return A Command
 </strong><strong>   */
-</strong><strong>  public Command setAngleAndStop(Angle angle, Angle tolerance) { return arm.runTo(angle, tolerance);}
+</strong><strong>  public Command runTo(Angle angle, Angle tolerance) { return arm.runTo(angle, tolerance);}
 </strong>  
 <strong>  /**
 </strong><strong>   * Set arm closed loop controller to go to the specified mechanism position.
@@ -697,7 +695,7 @@ public class RobotContainer {
     configureBindings();
 
 <strong>    // Set the default command to force the arm to go to 0.
-</strong><strong>    m_exampleSubsystem.setDefaultCommand(m_exampleSubsystem.setAngle(Degrees.of(0)));
+</strong><strong>    m_exampleSubsystem.setDefaultCommand(m_exampleSubsystem.run(Degrees.of(0)));
 </strong>  }
 
   /**
@@ -711,10 +709,10 @@ public class RobotContainer {
    */
   private void configureBindings() {
     
-<strong>    // Schedule `setAngle` when the Xbox controller's B button is pressed,
+<strong>    // Schedule `run` when the Xbox controller's B button is pressed,
 </strong><strong>    // cancelling on release.
-</strong><strong>    m_driverController.a().whileTrue(m_exampleSubsystem.setAngle(Degrees.of(-5)));
-</strong><strong>    m_driverController.b().whileTrue(m_exampleSubsystem.setAngle(Degrees.of(15)));
+</strong><strong>    m_driverController.a().whileTrue(m_exampleSubsystem.run(Degrees.of(-5)));
+</strong><strong>    m_driverController.b().whileTrue(m_exampleSubsystem.run(Degrees.of(15)));
 </strong><strong>    // Schedule `set` when the Xbox controller's B button is pressed,
 </strong><strong>    // cancelling on release.
 </strong><strong>    m_driverController.x().whileTrue(m_exampleSubsystem.set(0.3));

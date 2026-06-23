@@ -13,21 +13,19 @@ All `SmartMotorController`s support Exponential Profiles via the `ExponentialPro
 ```java
 private final Distance chainPitch = Inches.of(0.25);
 private final int toothCount = 22;
-private final Distance circumference = chainPitch.times(toothCount);
-private final Distance radius = circumference.div(2 * Math.PI);
 private final Mass     weight = Pounds.of(16);
 private final DCMotor  motors = DCMotor.getNEO(1);
 private final MechanismGearing gearing = new MechanismGearing(GearBox.fromReductionStages(3, 4));
 
 private final SmartMotorControllerConfig motorConfig        = new SmartMotorControllerConfig(this)
-      .withMechanismCircumference(circumference)
+      .withDrumRadius(chainPitch, toothCount)
       .withClosedLoopController(30, 0, 0)
       .withExponentialProfile(
       ExponentialProfilePIDController.createElevatorConstraints(
                                      Volts.of(12), // Maximum voltage during profile
                                      motors, // Motors
                                      weight, // Carraige weight
-                                     radius, // Drum radius
+                                     chainPitch.times(toothCount).div(2 * Math.PI), // Drum radius
                                      gearing))) // Gearing
 ...
 ```

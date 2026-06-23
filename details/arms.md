@@ -30,7 +30,8 @@ SmartMotorControllerConfig motorConfig = new SmartMotorControllerConfig(this)
 SmartMotorController smartMotorController = new SparkWrapper(armMotor,
                                                              DCMotor.getNEO(1),
                                                              motorConfig);
-ArmConfig armCfg = new ArmConfig(smartMotorController);
+ArmConfig armCfg = new ArmConfig();
+Arm arm = new Arm(armCfg, smartMotorController);
 ```
 
 The `SmartMotorControllerConfig` already has the gear ratio's to calculate rotor rotations into the `Arm` rotations and is configured for Telemetry and power optimizations.
@@ -54,7 +55,7 @@ However if you use a different type you can set the position of the mechanism us
 `ArmConfig.withLength` allows you to easily set the length of the arm for simulation purposes and calculate the Moment of Inertia for the Arm Simulation inside of YAMS.&#x20;
 
 ```java
-ArmConfig armCfg = new ArmConfig(smartMotorController)
+ArmConfig armCfg = new ArmConfig()
      .withLength(Feet.of(3));
 ```
 
@@ -62,23 +63,22 @@ Any changes in the length will require retuning of the Closed Loop Controller in
 
 ### Mass
 
-`ArmConfig.withMass` defines the mass of the Arm used to calculate the Moment of Inertia for the Arm Simulation inside of YAMS.&#x20;
+The mass (and resulting Moment of Inertia) used for the Arm Simulation is now configured on `SmartMotorControllerConfig` via `.withMomentOfInertia(Distance length, Mass mass)`.
 
 ```java
-ArmConfig armCfg = new ArmConfig(smartMotorController)
-     .withLength(Feet.of(3))
-     .withMass(Pounds.of(1));
+SmartMotorControllerConfig motorConfig = new SmartMotorControllerConfig(this)
+     .withMomentOfInertia(Feet.of(3), Pounds.of(1));
 ```
 
-Any changes in the mass will require retuning of the Closed Loop Controller in the `SmartMotorControllerConfig` because the Moment of Inertia has changed.
+Any changes in the length or mass will require retuning of the Closed Loop Controller in the `SmartMotorControllerConfig` because the Moment of Inertia has changed.
 
 ### Hard Limits
 
-`Arm.withHardLimit` defines the points in which there are physical stops that hopefully won't break on the real robot. Imagine them as an immovable force. These limits are used as an immovable force in the Arm simulation.
+`ArmConfig.withHardLimits` defines the points in which there are physical stops that hopefully won't break on the real robot. Imagine them as an immovable force. These limits are used as an immovable force in the Arm simulation.
 
 ```java
-ArmConfig armCfg = new ArmConfig(smartMotorController)
-      .withHardLimit(Degrees.of(-100), Degrees.of(200));
+ArmConfig armCfg = new ArmConfig()
+      .withHardLimits(Degrees.of(-100), Degrees.of(200));
 ```
 
 ### Starting Position

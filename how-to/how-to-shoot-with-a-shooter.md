@@ -68,18 +68,14 @@ public class ExampleSubsystem extends SubsystemBase {
   // Create our SmartMotorController from our Spark and config with the NEO.
   private SmartMotorController sparkSmartMotorController = new SparkWrapper(spark, DCMotor.getNEO(1), smcConfig);
 
- private final FlyWheelConfig shooterConfig = new FlyWheelConfig(motor)
+ private final FlyWheelConfig shooterConfig = new FlyWheelConfig()
   // Diameter of the flywheel.
   .withDiameter(Inches.of(4))
-  // Mass of the flywheel.
-  .withMass(Pounds.of(1))
-  // Maximum speed of the shooter.
-  .withUpperSoftLimit(RPM.of(1000))
   // Telemetry name and verbosity for the arm.
   .withTelemetry("Shooter", TelemetryVerbosity.HIGH);
 
   // Shooter Mechanism
-  private FlyWheel shooter = new FlyWheel(shooterConfig);
+  private FlyWheel shooter = new FlyWheel(shooterConfig, sparkSmartMotorController);
 
 <strong>  /**
 </strong><strong>   * Gets the current velocity of the shooter.
@@ -94,7 +90,7 @@ public class ExampleSubsystem extends SubsystemBase {
 </strong><strong>   * @param speed Speed to set.
 </strong><strong>   * @return {@link edu.wpi.first.wpilibj2.command.RunCommand}
 </strong><strong>   */
-</strong><strong>  public Command setVelocity(AngularVelocity speed) {return shooter.setSpeed(speed);}
+</strong><strong>  public Command run(AngularVelocity speed) {return shooter.run(speed);}
 </strong>
 <strong>  /**
 </strong><strong>   * Set the dutycycle of the shooter.
@@ -177,10 +173,10 @@ public class RobotContainer {
    */
   private void configureBindings() {
     
-<strong>    // Schedule `setVelocity` when the Xbox controller's B button is pressed,
+<strong>    // Schedule `run` when the Xbox controller's B button is pressed,
 </strong><strong>    // cancelling on release.
-</strong><strong>    m_driverController.a().whileTrue(m_exampleSubsystem.setVelocity(RPM.of(60)));
-</strong><strong>    m_driverController.b().whileTrue(m_exampleSubsystem.setVelocity(RPM.of(300)));
+</strong><strong>    m_driverController.a().whileTrue(m_exampleSubsystem.run(RPM.of(60)));
+</strong><strong>    m_driverController.b().whileTrue(m_exampleSubsystem.run(RPM.of(300)));
 </strong><strong>    // Schedule `set` when the Xbox controller's B button is pressed,
 </strong><strong>    // cancelling on release.
 </strong><strong>    m_driverController.x().whileTrue(m_exampleSubsystem.set(0.3));

@@ -251,16 +251,15 @@ public class ArmIOTalonFX implements ArmIO {
     // Step 2: Create SmartMotorController (TalonFXWrapper)
     SmartMotorController smc = new TalonFXWrapper(talonFX, DCMotor.getKrakenX60(1), smcConfig);
     
-    // Step 3: Create ArmConfig with the SmartMotorController
-    ArmConfig armConfig = new ArmConfig(smc)
+    // Step 3: Create ArmConfig
+    ArmConfig armConfig = new ArmConfig()
         .withLength(Inches.of(18))           // Arm length - used for simulation physics
-        .withMass(Pounds.of(5))              // Arm mass - used for simulation physics
-        .withHardLimit(Rotations.of(-0.3), Rotations.of(0.3))  // Physical hard stops for sim
+        .withHardLimits(Rotations.of(-0.3), Rotations.of(0.3))  // Physical hard stops for sim
         .withStartingPosition(Rotations.of(0))
         .withTelemetry("Arm", TelemetryVerbosity.HIGH);
     
     // Step 4: Create Arm mechanism - handles simulation automatically!
-    this.arm = new Arm(armConfig);
+    this.arm = new Arm(armConfig, smc);
     
     // Get reference to underlying SmartMotorController for telemetry
     this.motor = arm.getMotor();
@@ -341,7 +340,7 @@ public class ElevatorIOTalonFX implements ElevatorIO {
     // Step 1: Create SmartMotorControllerConfig
     SmartMotorControllerConfig smcConfig = new SmartMotorControllerConfig(subsystem)
         .withGearing(new MechanismGearing(GearBox.fromReductionStages(5, 4)))
-        .withMechanismCircumference(Inches.of(1.5 * Math.PI))  // Pulley circumference
+        .withDrumRadius(Inches.of(0.75))  // Drum radius
         .withClosedLoopController(10, 0, 0.5)
         .withSoftLimits(Meters.of(0.02), Meters.of(1.2))
         .withFeedforward(new ElevatorFeedforward(0.1, 0.2, 0.5, 0.01))
@@ -350,16 +349,15 @@ public class ElevatorIOTalonFX implements ElevatorIO {
     // Step 2: Create SmartMotorController (TalonFXWrapper)
     SmartMotorController smc = new TalonFXWrapper(talonFX, DCMotor.getKrakenX60(1), smcConfig);
     
-    // Step 3: Create ElevatorConfig with the SmartMotorController
-    ElevatorConfig elevatorConfig = new ElevatorConfig(smc)
-        .withDrumRadius(Inches.of(0.75))         // Drum radius for pulley
-        .withMass(Pounds.of(10))                 // Carriage mass - used for simulation physics
+    // Step 3: Create ElevatorConfig
+    ElevatorConfig elevatorConfig = new ElevatorConfig()
+        .withCarriageWeight(Pounds.of(10))                 // Carriage mass - used for simulation physics
         .withHardLimits(Meters.of(0), Meters.of(1.5))  // Physical hard stops for sim
         .withStartingHeight(Meters.of(0.5))
         .withTelemetry("Elevator", TelemetryVerbosity.HIGH);
     
     // Step 4: Create Elevator mechanism - handles simulation automatically!
-    this.elevator = new Elevator(elevatorConfig);
+    this.elevator = new Elevator(elevatorConfig, smc);
     
     // Get reference to underlying SmartMotorController for telemetry
     this.motor = elevator.getMotor();
@@ -447,14 +445,13 @@ public class ShooterIOTalonFX implements ShooterIO {
     // Step 2: Create SmartMotorController (TalonFXWrapper)
     SmartMotorController smc = new TalonFXWrapper(talonFX, DCMotor.getKrakenX60(1), smcConfig);
     
-    // Step 3: Create FlyWheelConfig with the SmartMotorController
-    FlyWheelConfig flywheelConfig = new FlyWheelConfig(smc)
+    // Step 3: Create FlyWheelConfig
+    FlyWheelConfig flywheelConfig = new FlyWheelConfig()
         .withDiameter(Inches.of(4))              // Flywheel diameter
-        .withMass(Pounds.of(0.5))                // Flywheel mass - used for simulation physics
         .withTelemetry("Shooter", TelemetryVerbosity.HIGH);
     
     // Step 4: Create FlyWheel mechanism - handles simulation automatically!
-    this.flywheel = new FlyWheel(flywheelConfig);
+    this.flywheel = new FlyWheel(flywheelConfig, smc);
     
     // Get reference to underlying SmartMotorController for telemetry
     this.motor = flywheel.getMotor();
@@ -610,8 +607,8 @@ public class RobotContainer {
     // Commands work identically on real robot and in simulation
     controller.a().whileTrue(arm.setAngle(Rotations.of(0.25)));
     controller.b().whileTrue(arm.setAngle(Rotations.of(-0.25)));
-    controller.x().whileTrue(elevator.setHeight(Meters.of(1.0)));
-    controller.y().whileTrue(shooter.setSpeed(RotationsPerSecond.of(80)));
+    controller.x().whileTrue(elevator.run(Meters.of(1.0)));
+    controller.y().whileTrue(shooter.run(RotationsPerSecond.of(80)));
   }
 }
 ```
@@ -927,14 +924,13 @@ public class ArmSubsystem extends SubsystemBase {
 
     armSMC = new TalonFXWrapper(new TalonFX(40), DCMotor.getFalcon500(1), smcConfig);
 
-    ArmConfig armCfg = new ArmConfig(armSMC)
-        .withHardLimit(Degrees.of(-25), Degrees.of(141))
+    ArmConfig armCfg = new ArmConfig()
+        .withHardLimits(Degrees.of(-25), Degrees.of(141))
         .withStartingPosition(Degrees.of(141))
         .withLength(Feet.of(14.0 / 12))
-        .withMOI(0.1055)
         .withTelemetry("Arm", TelemetryVerbosity.HIGH);
 
-    arm = new Arm(armCfg);
+    arm = new Arm(armCfg, armSMC);
   }
 
   public void updateInputs() {
@@ -945,7 +941,7 @@ public class ArmSubsystem extends SubsystemBase {
   }
 
   public Command setAngle(Angle angle) {
-    return arm.setAngle(angle);
+    return arm.run(angle);
   }
 
   @Override

@@ -28,7 +28,7 @@ SmartMotorControllerConfig smcConfig = new SmartMotorControllerConfig(this)
   .withStatorCurrentLimit(Amps.of(40))
   .withClosedLoopRampRate(Seconds.of(0.25))
   .withOpenLoopRampRate(Seconds.of(0.25))
-  .withMOI(Inches.of(4), Pounds.of(1));
+  .withMomentOfInertia(Inches.of(4), Pounds.of(1));
 
 // Vendor motor controller object
 SparkMax spark = new SparkMax(4, MotorType.kBrushless);
@@ -36,10 +36,10 @@ SparkMax spark = new SparkMax(4, MotorType.kBrushless);
 // Create our SmartMotorController from our Spark and config with the NEO.
 SmartMotorController sparkSmartMotorController = new SparkWrapper(spark, DCMotor.getNEO(1), smcConfig);
 
-FlyWheelConfig shooterConfig = new FlyWheelConfig(motor)
+FlyWheelConfig shooterConfig = new FlyWheelConfig()
   // Telemetry name and verbosity for the arm.
   .withTelemetry("Shooter", TelemetryVerbosity.HIGH);
 
   // Shooter Mechanism
-  private FlyWheel shooter = new FlyWheel(shooterConfig);
+  private FlyWheel shooter = new FlyWheel(shooterConfig, sparkSmartMotorController);
 ```

@@ -17,8 +17,8 @@ Remember that you measurement ≠ actual height of the mechanism UNLESS you set 
 ```java
 SmartMotorControllerConfig smcConfig = new SmartMotorControllerConfig(this)
   .withControlMode(ControlMode.CLOSED_LOOP)
-  // Mechanism Circumference is the distance traveled by each mechanism rotation converting rotations to meters.
-  .withMechanismCircumference(Meters.of(Inches.of(0.25).times(22).in(Meters)))
+  // Elevator drum radius API: pass the chain pitch and tooth count directly.
+  .withDrumRadius(Inches.of(0.25), 22)
   .withMechanismCircumference(Inches.of(4).times(Math.PI)) // 4in * PI
   .withWheelDiameter(Inches.of(4)) // Same as above
   .withWheelRadius(Inches.of(2)) // Same as above

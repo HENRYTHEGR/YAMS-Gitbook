@@ -97,6 +97,7 @@ We are going to start by configuring out motor controller.
 package frc.robot.subsystems;
 
 <strong>import static edu.wpi.first.units.Units.Amps;
+</strong><strong>import static edu.wpi.first.units.Units.Inches;
 </strong><strong>import static edu.wpi.first.units.Units.MetersPerSecond;
 </strong><strong>import static edu.wpi.first.units.Units.MetersPerSecondPerSecond;
 </strong><strong>import static edu.wpi.first.units.Units.Seconds;
@@ -114,8 +115,8 @@ public class ExampleSubsystem extends SubsystemBase {
 
 <strong>  private SmartMotorControllerConfig smcConfig = new SmartMotorControllerConfig(this)
 </strong><strong>  .withControlMode(ControlMode.CLOSED_LOOP)
-</strong><strong>  // Mechanism Circumference is the distance traveled by each mechanism rotation converting rotations to meters.
-</strong><strong>  .withMechanismCircumference(Meters.of(Inches.of(0.25).in(Meters) * 22))
+</strong><strong>  // Drum radius is required for elevators. Chain-driven: specify chain pitch and tooth count.
+</strong><strong>  .withDrumRadius(Inches.of(0.25), 22)
 </strong><strong>  // Feedback Constants (PID Constants)
 </strong><strong>  .withClosedLoopController(4, 0, 0)
 </strong><strong>  .withTrapezoidalProfile(MetersPerSecond.of(0.5), MetersPerSecondPerSecond.of(0.5))
@@ -175,6 +176,34 @@ public class ExampleSubsystem extends SubsystemBase {
 }
 
 </code></pre>
+
+{% hint style="info" %}
+**`withDrumRadius` is required for all elevators** — it tells YAMS how far the mechanism travels per motor revolution.
+
+**Chain-driven elevator (sprocket + chain):** pass the chain pitch and tooth count.
+
+* `#25 chain` has a pitch of **0.25 in**
+* `#35 chain` has a pitch of **0.375 in**
+
+```java
+.withDrumRadius(Inches.of(0.25), 22)   // #25 chain, 22-tooth sprocket
+.withDrumRadius(Inches.of(0.375), 16)  // #35 chain, 16-tooth sprocket
+```
+
+**Spool or direct-drive drum:** pass the physical radius of the drum.
+
+```java
+.withDrumRadius(Inches.of(0.875))  // drum with 0.875" radius
+```
+
+**Cascading elevators:** call `.withCascadingElevatorStages(n)` in addition to `withDrumRadius`. This divides the gearing by the number of stages so position tracking remains correct.
+
+```java
+.withDrumRadius(Inches.of(0.25), 22)
+.withCascadingElevatorStages(2)  // 2-stage cascade; divides gearing by 2
+```
+{% endhint %}
+
 {% endstep %}
 
 {% step %}
@@ -195,6 +224,7 @@ Now we add it to the `ExampleSubsystem.java`
 package frc.robot.subsystems;
 
 import static edu.wpi.first.units.Units.Amps;
+import static edu.wpi.first.units.Units.Inches;
 import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.MetersPerSecond;
 import static edu.wpi.first.units.Units.MetersPerSecondPerSecond;
@@ -216,8 +246,8 @@ public class ExampleSubsystem extends SubsystemBase {
 
   private SmartMotorControllerConfig smcConfig = new SmartMotorControllerConfig(this)
   .withControlMode(ControlMode.CLOSED_LOOP)
-  // Mechanism Circumference is the distance traveled by each mechanism rotation converting rotations to meters.
-  .withMechanismCircumference(Meters.of(Inches.of(0.25).in(Meters) * 22))
+  // Drum radius is required for elevators. Chain-driven: specify chain pitch and tooth count.
+  .withDrumRadius(Inches.of(0.25), 22)
   // Feedback Constants (PID Constants)
   .withClosedLoopController(4, 0, 0)
   .withTrapezoidalProfile(MetersPerSecond.of(0.5), MetersPerSecondPerSecond.of(0.5))
@@ -294,6 +324,7 @@ Our `SmartMotorController` will easily configure and interface with the vendor m
 package frc.robot.subsystems;
 
 import static edu.wpi.first.units.Units.Amps;
+import static edu.wpi.first.units.Units.Inches;
 import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.MetersPerSecond;
 import static edu.wpi.first.units.Units.MetersPerSecondPerSecond;
@@ -318,8 +349,8 @@ public class ExampleSubsystem extends SubsystemBase {
 
   private SmartMotorControllerConfig smcConfig = new SmartMotorControllerConfig(this)
   .withControlMode(ControlMode.CLOSED_LOOP)
-  // Mechanism Circumference is the distance traveled by each mechanism rotation converting rotations to meters.
-  .withMechanismCircumference(Meters.of(Inches.of(0.25).in(Meters) * 22))
+  // Drum radius is required for elevators. Chain-driven: specify chain pitch and tooth count.
+  .withDrumRadius(Inches.of(0.25), 22)
   // Feedback Constants (PID Constants)
   .withClosedLoopController(4, 0, 0)
   .withTrapezoidalProfile(MetersPerSecond.of(0.5), MetersPerSecondPerSecond.of(0.5))
@@ -399,6 +430,7 @@ Our `Elevator` will easily configure the `SmartMotorController` and create a sim
 package frc.robot.subsystems;
 
 import static edu.wpi.first.units.Units.Amps;
+import static edu.wpi.first.units.Units.Inches;
 import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.MetersPerSecond;
 import static edu.wpi.first.units.Units.MetersPerSecondPerSecond;
@@ -427,8 +459,8 @@ public class ExampleSubsystem extends SubsystemBase {
 
   private SmartMotorControllerConfig smcConfig = new SmartMotorControllerConfig(this)
   .withControlMode(ControlMode.CLOSED_LOOP)
-  // Mechanism Circumference is the distance traveled by each mechanism rotation converting rotations to meters.
-  .withMechanismCircumference(Meters.of(Inches.of(0.25).in(Meters) * 22))
+  // Drum radius is required for elevators. Chain-driven: specify chain pitch and tooth count.
+  .withDrumRadius(Inches.of(0.25), 22)
   // Feedback Constants (PID Constants)
   .withClosedLoopController(4, 0, 0)
   .withTrapezoidalProfile(MetersPerSecond.of(0.5), MetersPerSecondPerSecond.of(0.5))
@@ -455,14 +487,13 @@ public class ExampleSubsystem extends SubsystemBase {
   // Create our SmartMotorController from our Spark and config with the NEO.
   private SmartMotorController sparkSmartMotorController = new SparkWrapper(spark, DCMotor.getNEO(1), smcConfig);
 
-<strong>  private ElevatorConfig elevconfig = new ElevatorConfig(sparkSmartMotorController)
-</strong><strong>      .withStartingHeight(Meters.of(0.5))
+<strong>  private ElevatorConfig elevconfig = new ElevatorConfig()
 </strong><strong>      .withHardLimits(Meters.of(0), Meters.of(3))
 </strong><strong>      .withTelemetry("Elevator", TelemetryVerbosity.HIGH)
-</strong><strong>      .withMass(Pounds.of(16));
+</strong><strong>      .withCarriageWeight(Pounds.of(16));
 </strong>
 <strong>  // Elevator Mechanism
-</strong><strong>  private Elevator elevator = new Elevator(elevconfig);
+</strong><strong>  private Elevator elevator = new Elevator(elevconfig, sparkSmartMotorController);
 </strong>
   /** Creates a new ExampleSubsystem. */
   public ExampleSubsystem() {}
@@ -518,6 +549,7 @@ We use the `Elevator` class as a interface to create commands!
 package frc.robot.subsystems;
 
 import static edu.wpi.first.units.Units.Amps;
+import static edu.wpi.first.units.Units.Inches;
 import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.MetersPerSecond;
 import static edu.wpi.first.units.Units.MetersPerSecondPerSecond;
@@ -549,8 +581,8 @@ public class ExampleSubsystem extends SubsystemBase {
 
   private SmartMotorControllerConfig smcConfig = new SmartMotorControllerConfig(this)
     .withControlMode(ControlMode.CLOSED_LOOP)
-    // Mechanism Circumference is the distance traveled by each mechanism rotation converting rotations to meters.
-    .withMechanismCircumference(Meters.of(Inches.of(0.25).in(Meters) * 22))
+    // Drum radius is required for elevators. Chain-driven: specify chain pitch and tooth count.
+    .withDrumRadius(Inches.of(0.25), 22)
     // Feedback Constants (PID Constants)
     .withClosedLoopController(4, 0, 0)
     .withTrapezoidalProfile(MetersPerSecond.of(0.5), MetersPerSecondPerSecond.of(0.5))
@@ -577,29 +609,28 @@ public class ExampleSubsystem extends SubsystemBase {
   // Create our SmartMotorController from our Spark and config with the NEO.
   private SmartMotorController sparkSmartMotorController = new SparkWrapper(spark, DCMotor.getNEO(1), smcConfig);
 
-  private ElevatorConfig elevconfig = new ElevatorConfig(sparkSmartMotorController)
-      .withStartingHeight(Meters.of(0.5))
+  private ElevatorConfig elevconfig = new ElevatorConfig()
       .withHardLimits(Meters.of(0), Meters.of(3))
       .withTelemetry("Elevator", TelemetryVerbosity.HIGH)
-      .withMass(Pounds.of(16));
+      .withCarriageWeight(Pounds.of(16));
 
   // Elevator Mechanism
-  private Elevator elevator = new Elevator(elevconfig);
+  private Elevator elevator = new Elevator(elevconfig, sparkSmartMotorController);
 
 <strong>  /**
-</strong><strong>   * Set the height of the elevator and does not end the command when reached.
-</strong><strong>   * @param angle Distance to go to.
+</strong><strong>   * Runs the elevator to the given height and does not end the command when reached.
+</strong><strong>   * @param height Distance to go to.
 </strong><strong>   * @return a Command
 </strong><strong>   */
-</strong><strong>  public Command setHeight(Distance height) { return elevator.run(height);}
+</strong><strong>  public Command run(Distance height) { return elevator.run(height);}
 </strong>  
 <strong>  /**
-</strong><strong>   * Set the height of the elevator and ends the command when reached, but not the closed loop controller.
+</strong><strong>   * Runs the elevator to the given height and ends the command when reached, but not the closed loop controller.
 </strong><strong>   * @param height Distance to go to.
 </strong><strong>   * @param tolerance Distance tolerance for completion.
 </strong><strong>   * @return A Command
 </strong><strong>   */
-</strong><strong>  public Command setHeightAndStop(Distance height, Distance tolerance) { return elevator.runTo(height, tolerance);}
+</strong><strong>  public Command runTo(Distance height, Distance tolerance) { return elevator.runTo(height, tolerance);}
 </strong>  
 <strong>  /**
 </strong><strong>   * Set the elevators closed loop controller setpoint.
@@ -703,7 +734,7 @@ public class RobotContainer {
     configureBindings();
 
 <strong>    // Set the default command to force the elevator to go to 0.
-</strong><strong>    m_exampleSubsystem.setDefaultCommand(m_exampleSubsystem.setHeight(Meters.of(0)));
+</strong><strong>    m_exampleSubsystem.setDefaultCommand(m_exampleSubsystem.run(Meters.of(0)));
 </strong>  }
 
   /**
@@ -717,10 +748,10 @@ public class RobotContainer {
    */
   private void configureBindings() {
     
-<strong>    // Schedule `setHeight` when the Xbox controller's B button is pressed,
+<strong>    // Schedule `run` when the Xbox controller's B button is pressed,
 </strong><strong>    // cancelling on release.
-</strong><strong>    m_driverController.a().whileTrue(m_exampleSubsystem.setHeight(Meters.of(0.5)));
-</strong><strong>    m_driverController.b().whileTrue(m_exampleSubsystem.setHeight(Meters.of(1)));
+</strong><strong>    m_driverController.a().whileTrue(m_exampleSubsystem.run(Meters.of(0.5)));
+</strong><strong>    m_driverController.b().whileTrue(m_exampleSubsystem.run(Meters.of(1)));
 </strong><strong>    // Schedule `set` when the Xbox controller's B button is pressed,
 </strong><strong>    // cancelling on release.
 </strong><strong>    m_driverController.x().whileTrue(m_exampleSubsystem.set(0.3));

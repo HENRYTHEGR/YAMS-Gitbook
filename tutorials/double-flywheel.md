@@ -293,22 +293,18 @@ public class DoubleFlywheelSubsystem extends SubsystemBase {
   private SmartMotorController lowerMotor = new TalonFXWrapper(lowerTalon, DCMotor.getKrakenX60(1), lowerConfig);
 
   // Upper FlyWheel Mechanism Config
-  private final FlyWheelConfig upperFlywheelConfig = new FlyWheelConfig(upperMotor)
+  private final FlyWheelConfig upperFlywheelConfig = new FlyWheelConfig()
       .withDiameter(Inches.of(4))
-      .withMass(Pounds.of(1))
-      .withUpperSoftLimit(RPM.of(6000))
       .withTelemetry("UpperFlyWheelMech", TelemetryVerbosity.HIGH);
 
   // Lower FlyWheel Mechanism Config
-  private final FlyWheelConfig lowerFlywheelConfig = new FlyWheelConfig(lowerMotor)
+  private final FlyWheelConfig lowerFlywheelConfig = new FlyWheelConfig()
       .withDiameter(Inches.of(4))
-      .withMass(Pounds.of(1))
-      .withUpperSoftLimit(RPM.of(6000))
       .withTelemetry("LowerFlyWheelMech", TelemetryVerbosity.HIGH);
 
   // FlyWheel Mechanisms
-  private FlyWheel upperFlywheel = new FlyWheel(upperFlywheelConfig);
-  private FlyWheel lowerFlywheel = new FlyWheel(lowerFlywheelConfig);
+  private FlyWheel upperFlywheel = new FlyWheel(upperFlywheelConfig, upperMotor);
+  private FlyWheel lowerFlywheel = new FlyWheel(lowerFlywheelConfig, lowerMotor);
 
   /** Creates a new DoubleFlywheelSubsystem. */
   public DoubleFlywheelSubsystem() {}
@@ -404,22 +400,18 @@ public class DoubleFlywheelSubsystem extends SubsystemBase {
   private SmartMotorController lowerMotor = new TalonFXWrapper(lowerTalon, DCMotor.getKrakenX60(1), lowerConfig);
 
   // Upper FlyWheel Mechanism Config
-  private final FlyWheelConfig upperFlywheelConfig = new FlyWheelConfig(upperMotor)
+  private final FlyWheelConfig upperFlywheelConfig = new FlyWheelConfig()
       .withDiameter(Inches.of(4))
-      .withMass(Pounds.of(1))
-      .withUpperSoftLimit(RPM.of(6000))
       .withTelemetry("UpperFlyWheelMech", TelemetryVerbosity.HIGH);
 
   // Lower FlyWheel Mechanism Config
-  private final FlyWheelConfig lowerFlywheelConfig = new FlyWheelConfig(lowerMotor)
+  private final FlyWheelConfig lowerFlywheelConfig = new FlyWheelConfig()
       .withDiameter(Inches.of(4))
-      .withMass(Pounds.of(1))
-      .withUpperSoftLimit(RPM.of(6000))
       .withTelemetry("LowerFlyWheelMech", TelemetryVerbosity.HIGH);
 
   // FlyWheel Mechanisms
-  private FlyWheel upperFlywheel = new FlyWheel(upperFlywheelConfig);
-  private FlyWheel lowerFlywheel = new FlyWheel(lowerFlywheelConfig);
+  private FlyWheel upperFlywheel = new FlyWheel(upperFlywheelConfig, upperMotor);
+  private FlyWheel lowerFlywheel = new FlyWheel(lowerFlywheelConfig, lowerMotor);
 
   /** Creates a new DoubleFlywheelSubsystem. */
   public DoubleFlywheelSubsystem() {}
@@ -433,8 +425,8 @@ public class DoubleFlywheelSubsystem extends SubsystemBase {
    */
   public Command setFlywheelSpeeds(AngularVelocity upperSpeed, AngularVelocity lowerSpeed) {
     return Commands.parallel(
-        upperFlywheel.setVelocity(upperSpeed),
-        lowerFlywheel.setVelocity(lowerSpeed)
+        upperFlywheel.run(upperSpeed),
+        lowerFlywheel.run(lowerSpeed)
     );
   }
 
