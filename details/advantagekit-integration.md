@@ -244,6 +244,7 @@ public class ArmIOTalonFX implements ArmIO {
     SmartMotorControllerConfig smcConfig = new SmartMotorControllerConfig(subsystem)
         .withGearing(new MechanismGearing(GearBox.fromReductionStages(5, 4, 3)))
         .withClosedLoopController(5, 0, 0.1)
+        .withSoftLimits(Rotations.of(-0.25), Rotations.of(0.25))
         .withFeedforward(new ArmFeedforward(0.1, 0.3, 0.5, 0.01))
         .withTrapezoidalProfile(RotationsPerSecond.of(1.0), RotationsPerSecondPerSecond.of(2.0));
     
@@ -255,7 +256,6 @@ public class ArmIOTalonFX implements ArmIO {
         .withLength(Inches.of(18))           // Arm length - used for simulation physics
         .withMass(Pounds.of(5))              // Arm mass - used for simulation physics
         .withHardLimit(Rotations.of(-0.3), Rotations.of(0.3))  // Physical hard stops for sim
-        .withSoftLimits(Rotations.of(-0.25), Rotations.of(0.25))
         .withStartingPosition(Rotations.of(0))
         .withTelemetry("Arm", TelemetryVerbosity.HIGH);
     
@@ -343,6 +343,7 @@ public class ElevatorIOTalonFX implements ElevatorIO {
         .withGearing(new MechanismGearing(GearBox.fromReductionStages(5, 4)))
         .withMechanismCircumference(Inches.of(1.5 * Math.PI))  // Pulley circumference
         .withClosedLoopController(10, 0, 0.5)
+        .withSoftLimits(Meters.of(0.02), Meters.of(1.2))
         .withFeedforward(new ElevatorFeedforward(0.1, 0.2, 0.5, 0.01))
         .withTrapezoidalProfile(MetersPerSecond.of(1.0), MetersPerSecondPerSecond.of(2.0));
     
@@ -354,7 +355,6 @@ public class ElevatorIOTalonFX implements ElevatorIO {
         .withDrumRadius(Inches.of(0.75))         // Drum radius for pulley
         .withMass(Pounds.of(10))                 // Carriage mass - used for simulation physics
         .withHardLimits(Meters.of(0), Meters.of(1.5))  // Physical hard stops for sim
-        .withSoftLimits(Meters.of(0.02), Meters.of(1.2))
         .withStartingHeight(Meters.of(0.5))
         .withTelemetry("Elevator", TelemetryVerbosity.HIGH);
     
@@ -441,6 +441,7 @@ public class ShooterIOTalonFX implements ShooterIO {
     SmartMotorControllerConfig smcConfig = new SmartMotorControllerConfig(subsystem)
         .withGearing(new MechanismGearing(GearBox.fromReductionStages(1)))  // Direct drive
         .withClosedLoopController(0.5, 0, 0)
+        .withSoftLimit(RPM.of(0), RPM.of(6000))  // Velocity soft limits
         .withFeedforward(new SimpleMotorFeedforward(0.1, 0.12, 0.01));
     
     // Step 2: Create SmartMotorController (TalonFXWrapper)
@@ -450,7 +451,6 @@ public class ShooterIOTalonFX implements ShooterIO {
     FlyWheelConfig flywheelConfig = new FlyWheelConfig(smc)
         .withDiameter(Inches.of(4))              // Flywheel diameter
         .withMass(Pounds.of(0.5))                // Flywheel mass - used for simulation physics
-        .withSoftLimit(RPM.of(0), RPM.of(6000))  // Velocity soft limits
         .withTelemetry("Shooter", TelemetryVerbosity.HIGH);
     
     // Step 4: Create FlyWheel mechanism - handles simulation automatically!
