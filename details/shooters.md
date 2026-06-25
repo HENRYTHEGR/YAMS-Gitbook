@@ -43,3 +43,9 @@ FlyWheelConfig shooterConfig = new FlyWheelConfig()
   // Shooter Mechanism
   private FlyWheel shooter = new FlyWheel(shooterConfig, sparkSmartMotorController);
 ```
+
+## Code Reference
+
+{% @github-files/github-code-block url="https://github.com/Yet-Another-Software-Suite/YAMS/blob/master/examples/simple_shooter/java/frc/robot/subsystems/ShooterSubsystem.java" %}
+
+{% @github-files/github-code-block url="https://github.com/Yet-Another-Software-Suite/YAMS/blob/master/examples/hooded_shooter/java/frc/robot/subsystems/FlywheelSubsystem.java" %}

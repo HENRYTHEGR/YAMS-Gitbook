@@ -1,5 +1,7 @@
 # How do I use Exponential Profiles?
 
+Trapezoidal motion profiles assume constant maximum acceleration throughout a move, which can cause jerky starts on high-inertia mechanisms like heavy elevators or long arms. Exponential profiles let the acceleration vary continuously so the motor builds speed smoothly, following the physics of what the motor can actually deliver at each moment — this reduces overshoot and makes tuning more forgiving. Reach for exponential profiles when your trapezoidal profile produces oscillation, mechanical banging at the start of a move, or is difficult to tune around mechanical disturbances.
+
 ## What are exponential profiles?
 
 Exponential profiles are best described by CTRE, however with YAMS they are supported by all motor controllers.&#x20;
@@ -35,4 +37,6 @@ There are multiple ways to create constraints, like [`createArmConstraints`](htt
 ## When should I use Exponential Profiles?
 
 Exponential Profiles are easier to tune than Trapezoidal Profiles (from `ProfiledPIDController`) and are very good at overcoming mechanical failures to a point. It CANNOT speed up a mechanism that is massively under-powered and slow to move. Trapezoidal Profiles often fail miserably when a mechanism experiences disturbances along its movement, aside from fixing those disturbances an Exponential Profile is probably your best chance at getting it "working" quickly.
+
+{% @github-files/github-code-block url="https://github.com/Yet-Another-Software-Suite/YAMS/blob/master/examples/exponential_arm/java/frc/robot/subsystems/ExponentiallyProfiledArmSubsystem.java" %}
 

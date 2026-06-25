@@ -11,7 +11,7 @@
 * [Double FlyWheel](tutorials/double-flywheel.md)
 * [Swerve Drive](tutorials/swerve-drive.md)
 
-## How To
+## Explanation
 
 * [How do I use a vendor hardware config?](how-to/how-do-i-use-a-vendor-hardware-config.md)
 * [How to set an Arm's target Angle?](how-to/how-to-set-an-arms-target-angle.md)
@@ -25,7 +25,7 @@
 * [How do I use absolute encoders on my Arm?](how-to/how-do-i-use-absolute-encoders-on-my-arm.md)
 * [How to disable linear closed loop control?](how-to/how-to-disable-linear-closed-loop-control.md)
 
-## Details
+## Understanding
 
 * [AdvantageKit Integration](details/advantagekit-integration.md)
 * [Organizing Configs in Constants](details/config-organization.md)

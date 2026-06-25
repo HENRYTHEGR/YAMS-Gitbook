@@ -757,8 +757,10 @@ Congratulations on successfully programming your Arm!! :tada::tada:
 {% endstep %}
 {% endstepper %}
 
-{% hint style="info" %}
-Examples can be found in the YAMS repository on GitHub.
+## Complete Example
 
-[https://github.com/Yet-Another-Software-Suite/YAMS/tree/master/examples/simple\_arm](https://github.com/Yet-Another-Software-Suite/YAMS/tree/master/examples/simple_arm)
-{% endhint %}
+The following files show a complete, working Arm implementation matching the hardware described in this tutorial.
+
+{% @github-files/github-code-block url="https://github.com/Yet-Another-Software-Suite/YAMS/blob/master/examples/simple_arm/java/frc/robot/subsystems/ArmSubsystem.java" %}
+
+{% @github-files/github-code-block url="https://github.com/Yet-Another-Software-Suite/YAMS/blob/master/examples/simple_arm/java/frc/robot/RobotContainer.java" %}

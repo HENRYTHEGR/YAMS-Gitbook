@@ -796,8 +796,10 @@ Congratulations on successfully programming your Elevator!! :tada::tada:
 {% endstep %}
 {% endstepper %}
 
-{% hint style="info" %}
-Examples can be found in the YAMS repository on GitHub.
+## Complete Example
 
-[https://github.com/Yet-Another-Software-Suite/YAMS/tree/master/examples/simple\_elevator](https://github.com/Yet-Another-Software-Suite/YAMS/tree/master/examples/simple_elevator)
-{% endhint %}
+The following files show a complete, working Elevator implementation matching the hardware described in this tutorial.
+
+{% @github-files/github-code-block url="https://github.com/Yet-Another-Software-Suite/YAMS/blob/master/examples/simple_elevator/java/frc/robot/subsystems/ElevatorSubsystem.java" %}
+
+{% @github-files/github-code-block url="https://github.com/Yet-Another-Software-Suite/YAMS/blob/master/examples/simple_elevator/java/frc/robot/RobotContainer.java" %}

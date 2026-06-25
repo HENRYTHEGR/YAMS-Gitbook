@@ -608,3 +608,13 @@ The key differences from a single flywheel are:
 2. Two separate `SmartMotorController` instances
 3. Two separate `FlyWheel` mechanism instances
 4. Commands that coordinate both flywheels using `Commands.parallel()`
+
+## Complete Example
+
+The following files show a complete hooded-shooter implementation with two independent flywheels and a hood pivot.
+
+{% @github-files/github-code-block url="https://github.com/Yet-Another-Software-Suite/YAMS/blob/master/examples/hooded_shooter/java/frc/robot/subsystems/FlywheelSubsystem.java" %}
+
+{% @github-files/github-code-block url="https://github.com/Yet-Another-Software-Suite/YAMS/blob/master/examples/hooded_shooter/java/frc/robot/subsystems/HoodSubsystem.java" %}
+
+{% @github-files/github-code-block url="https://github.com/Yet-Another-Software-Suite/YAMS/blob/master/examples/hooded_shooter/java/frc/robot/RobotContainer.java" %}

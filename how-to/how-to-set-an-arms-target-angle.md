@@ -1,5 +1,7 @@
 # How to set an Arm's target Angle?
 
+An `Arm`'s position setpoint is an `Angle` expressed in WPILib's typed unit system (`Angle`, `edu.wpi.first.units.measure.Angle`). Understanding the difference between `run()` — which tracks the setpoint continuously — and `runTo()` — which ends the command once the setpoint is reached within tolerance — shapes how you bind controls in `RobotContainer`.
+
 ### Create `Command`s with our `Arm`
 
 We use the `Arm` class as a interface to create commands!

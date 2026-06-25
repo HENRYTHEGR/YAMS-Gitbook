@@ -107,3 +107,9 @@ SmartMotorControllerConfig motorConfig = new SmartMotorControllerConfig(this)
       .withUseExternalFeedbackEncoder(true)
       .withExternalEncoderZeroOffset(Degrees.of(0));
 ```
+
+## Code Reference
+
+{% @github-files/github-code-block url="https://github.com/Yet-Another-Software-Suite/YAMS/blob/master/examples/simple_arm/java/frc/robot/subsystems/ArmSubsystem.java" %}
+
+{% @github-files/github-code-block url="https://github.com/Yet-Another-Software-Suite/YAMS/blob/master/examples/exponential_arm/java/frc/robot/subsystems/ExponentiallyProfiledArmSubsystem.java" %}

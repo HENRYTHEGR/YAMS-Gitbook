@@ -1,5 +1,7 @@
 # How do I use a vendor hardware config?
 
+Some motor controllers ship with on-board configurations stored in flash, and vendor APIs expose options that YAMS does not surface directly — things like CANivore bus selection, custom status frame rates, or audio feedback settings. YAMS integrates with these through a hardware config layer: you pre-build a vendor config object and hand it to `SmartMotorControllerConfig.withVendorConfig()`, and YAMS merges its own settings on top without discarding the rest. Understanding when to use a vendor hardware config (versus configuring purely through YAMS) helps you avoid conflicting settings between the vendor's stored config and YAMS's runtime config.
+
 YAMS configures your motor controller automatically based on your `SmartMotorControllerConfig`. But sometimes you need to reach features that YAMS doesn't expose directly — custom voltage limits, CANivore bus names, status frame rates, or device-specific options only available through the vendor's own configuration object.
 
 `SmartMotorControllerConfig.withVendorConfig(Object config)` lets you supply a pre-built vendor config as a baseline. YAMS merges its own settings on top of it, so anything you set in `SmartMotorControllerConfig` always wins, but everything else you configured in the vendor object is preserved.

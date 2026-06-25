@@ -60,3 +60,7 @@ MOI is configured on `SmartMotorControllerConfig` via `.withMomentOfInertia(Dist
 SmartMotorControllerConfig motorConfig = new SmartMotorControllerConfig(this)
       .withMomentOfInertia(Meters.of(0.25), Pounds.of(4)); // MOI Calculation
 ```
+
+## Code Reference
+
+{% @github-files/github-code-block url="https://github.com/Yet-Another-Software-Suite/YAMS/blob/master/examples/simple_robot/src/main/java/frc/robot/subsystems/TurretSubsystem.java" %}

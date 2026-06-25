@@ -732,8 +732,10 @@ Congratulations on successfully programming your Shooter!! :tada::tada:
 {% endstep %}
 {% endstepper %}
 
-{% hint style="info" %}
-Examples can be found in the YAMS repository on GitHub.
+## Complete Example
 
-[https://github.com/Yet-Another-Software-Suite/YAMS/tree/master/examples/simple\_shooter](https://github.com/Yet-Another-Software-Suite/YAMS/tree/master/examples/simple_shooter)
-{% endhint %}
+The following files show a complete, working single-flywheel Shooter implementation.
+
+{% @github-files/github-code-block url="https://github.com/Yet-Another-Software-Suite/YAMS/blob/master/examples/simple_shooter/java/frc/robot/subsystems/ShooterSubsystem.java" %}
+
+{% @github-files/github-code-block url="https://github.com/Yet-Another-Software-Suite/YAMS/blob/master/examples/simple_shooter/java/frc/robot/RobotContainer.java" %}

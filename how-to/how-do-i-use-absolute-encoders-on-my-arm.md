@@ -1,5 +1,7 @@
 # How do I use absolute encoders on my Arm?
 
+Relative encoders (built into most NEOs and Falcons) lose their zero reference on every power cycle, so an arm must be homed before closed-loop control is accurate. Absolute encoders retain their position across power cycles and eliminate the homing step entirely, which is especially important for arms that park at a non-zero angle. YAMS accepts an absolute encoder offset that maps the encoder's native range to your arm's coordinate system.
+
 Absolute encoders report the physical position of a mechanism within a single rotation and retain that reading across power cycles and reboots. On an Arm (or Pivot) mechanism this means the robot always knows where the arm is the moment it powers on — no homing routine, no encoder drift from brownouts or e-stops.
 
 ## Supported encoder types
@@ -173,3 +175,9 @@ private final SmartMotorController smc = new TalonFXSWrapper(armMotor, DCMotor.g
 ## Using absolute encoders on a Pivot
 
 The exact same external encoder setup described above works identically for `Pivot` mechanisms (turrets, wrists, and any other single-axis rotational mechanism). The configuration API and all five setup steps are unchanged — just substitute your `PivotConfig` and the appropriate wrapper.
+
+## Code Reference
+
+The exponential arm example demonstrates configuring an absolute encoder with an offset:
+
+{% @github-files/github-code-block url="https://github.com/Yet-Another-Software-Suite/YAMS/blob/master/examples/exponential_arm/java/frc/robot/subsystems/ExponentiallyProfiledArmSubsystem.java" %}
