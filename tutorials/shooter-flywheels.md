@@ -1,7 +1,6 @@
 ---
 description: We will learn how to program an Shooter!
 ---
-
 # Shooter/FlyWheels
 
 {% hint style="danger" %}
@@ -22,9 +21,9 @@ This `Shooter` will be using the following hardware specs and control details
 
 * `SparkMax` controlling the `Shooter`
 * `12:1` GearBox on the `Shooter`
-* Pressing `A` will make the `Shooter` go to 60 RPM
+* Pressing `A` will make the `fShooter` go to 60 RPM
 * Pressing `B` will make the `Shooter` go to 300 RPM
-* Pressing `X` will make the `Shooter` speed up.
+* Pressing `X` will make the `Shofoter` speed up.
 * Pressing `Y` will make the `Shooter` slow down.
 
 ## Lets create a WPILib Command-Based Project!
@@ -66,17 +65,18 @@ Click on the **WPILib logo** on the **left** pane. Scroll down to **Yet Another 
 
 <figure><img src="../.gitbook/assets/RobotContainer.java - simple_robot - Visual Studio Code 9_2_2025 3_40_21 PM.png" alt=""><figcaption></figcaption></figure>
 
-Congratulations you have now installed YAMS! :tada:
+Congratulations you have now installed YAMS! 🎉️
 
 ## Lets make a Shooter move!
 
 {% stepper %}
 {% step %}
+
 ### Create a `SmartMotorControllerConfig`
 
 We are going to start by configuring out motor controller.
 
-<pre class="language-java" data-title="ExampleSubsystem.java" data-line-numbers data-full-width="true"><code class="lang-java">// Copyright (c) FIRST and other WPILib contributors.
+'''''''''<pre class="language-java" data-title="ExampleSubsystem.java" data-line-numbers data-full-width="true"><code class="lang-java">// Copyright (c) FIRST and other WPILib contributors.
 // Open Source Software; you can modify and/or share it under the terms of
 // the WPILib BSD license file in the root directory of this project.
 
@@ -117,48 +117,52 @@ public class ExampleSubsystem extends SubsystemBase {
 </strong><strong>  .withIdleMode(MotorMode.COAST)
 </strong><strong>  .withStatorCurrentLimit(Amps.of(40));
 </strong>
-  /** Creates a new ExampleSubsystem. */
-  public ExampleSubsystem() {}
+/** Creates a new ExampleSubsystem. */
+public ExampleSubsystem() {}
 
-  /**
-   * Example command factory method.
-   *
-   * @return a command
-   */
+/**
+
+* Example command factory method.
+*
+* @return a command
+  */
   public Command exampleMethodCommand() {
-    // Inline construction of command goes here.
-    // Subsystem::RunOnce implicitly requires `this` subsystem.
-    return runOnce(
-        () -> {
-          /* one-time action goes here */
-        });
+  // Inline construction of command goes here.
+  // Subsystem::RunOnce implicitly requires `this` subsystem.
+  return runOnce(
+  () -> {
+  /* one-time action goes here */
+  });
   }
 
-  /**
-   * An example method querying a boolean state of the subsystem (for example, a digital sensor).
-   *
-   * @return value of some boolean subsystem state, such as a digital sensor.
-   */
+/**
+
+* An example method querying a boolean state of the subsystem (for example, a digital sensor).
+*
+* @return value of some boolean subsystem state, such as a digital sensor.
+  */
   public boolean exampleCondition() {
-    // Query some boolean state, such as a digital sensor.
-    return false;
+  // Query some boolean state, such as a digital sensor.
+  return false;
   }
 
-  @Override
-  public void periodic() {
-    // This method will be called once per scheduler run
-  }
+@Override
+public void periodic() {
+// This method will be called once per scheduler run
+}
 
-  @Override
-  public void simulationPeriodic() {
-    // This method will be called once per scheduler run during simulation
-  }
+@Override
+public void simulationPeriodic() {
+// This method will be called once per scheduler run during simulation
+}
 }
 
 </code></pre>
+
 {% endstep %}
 
 {% step %}
+
 ### Create our motor controller
 
 To control our `FlyWheel` motor we will create the vendor motor controller object.
@@ -256,9 +260,11 @@ public class ExampleSubsystem extends SubsystemBase {
   }
 }
 </code></pre>
+
 {% endstep %}
 
 {% step %}
+
 ### Create our `SmartMotorController`
 
 Our `SmartMotorController` will easily configure and interface with the vendor motor controller object.
@@ -356,9 +362,11 @@ public class ExampleSubsystem extends SubsystemBase {
 }
 
 </code></pre>
+
 {% endstep %}
 
 {% step %}
+
 ### Create and Configure our `FlyWheel`
 
 Our `FlyWheel` will easily configure the `SmartMotorController` and create a simple and intuitive interface.
@@ -424,11 +432,13 @@ public class ExampleSubsystem extends SubsystemBase {
 <strong> private final FlyWheelConfig shooterConfig = new FlyWheelConfig()
 </strong><strong>  // Diameter of the flywheel.
 </strong><strong>  .withDiameter(Inches.of(4))
+</strong><strong>  // Smart Motor Controller To Use
+</strong><strong>  .withSmartMotorController(sparkSmartMotorController)
 </strong><strong>  // Telemetry name and verbosity for the arm.
 </strong><strong>  .withTelemetry("ShooterMech", TelemetryVerbosity.HIGH);
 </strong>
 <strong>  // Shooter Mechanism
-</strong><strong>  private FlyWheel shooter = new FlyWheel(shooterConfig, sparkSmartMotorController);
+</strong><strong>  private FlyWheel shooter = new FlyWheel(shooterConfig);
 </strong>
   /** Creates a new ExampleSubsystem. */
   public ExampleSubsystem() {}
@@ -470,9 +480,11 @@ public class ExampleSubsystem extends SubsystemBase {
 </strong>  }
 }
 </code></pre>
+
 {% endstep %}
 
 {% step %}
+
 ### Create `Command`s with our `FlyWheel`
 
 We use the `FlyWheel` class as a interface to create commands!
@@ -538,14 +550,17 @@ public class ExampleSubsystem extends SubsystemBase {
   // Create our SmartMotorController from our Spark and config with the NEO.
   private SmartMotorController sparkSmartMotorController = new SparkWrapper(spark, DCMotor.getNEO(1), smcConfig);
 
- private final FlyWheelConfig shooterConfig = new FlyWheelConfig()
-  // Diameter of the flywheel.
-  .withDiameter(Inches.of(4))
-  // Telemetry name and verbosity for the arm.
-  .withTelemetry("ShooterMech", TelemetryVerbosity.HIGH);
+  private final FlyWheelConfig shooterConfig = new FlyWheelConfig()
+    // Diameter of the flywheel.
+    .withDiameter(Inches.of(4))
+    // Smart Motor Controller To Use
+    .withSmartMotorController(sparkSmartMotorController)
+    // Telemetry name and verbosity for the arm.
+    .withTelemetry("ShooterMech", TelemetryVerbosity.HIGH);
 
-  // Shooter Mechanism
-  private FlyWheel shooter = new FlyWheel(shooterConfig, sparkSmartMotorController);
+// Shooter Mechanism
+private FlyWheel shooter = new FlyWheel(shooterConfig);
+
 
 <strong>  /**
 </strong><strong>   * Gets the current velocity of the shooter.
@@ -568,14 +583,6 @@ public class ExampleSubsystem extends SubsystemBase {
 </strong><strong>   * @param speed Speed to set
 </strong><strong>   */
 </strong><strong>  public void setVelocitySetpoint(AngularVelocity speed) {shooter.setMechanismVelocitySetpoint(speed);}
-</strong>  
-  /**
-   * Runs the shooter at the given velocity.
-   *
-   * @param speed Speed to set.
-   * @return {@link edu.wpi.first.wpilibj2.command.RunCommand}
-   */
-  public Command run(AngularVelocity speed) {return shooter.run(speed);}
 
 <strong>  /**
 </strong><strong>   * Set the dutycycle of the shooter.
@@ -626,9 +633,11 @@ public class ExampleSubsystem extends SubsystemBase {
 }
 
 </code></pre>
+
 {% endstep %}
 
 {% step %}
+
 ### Bind buttons to our `FlyWheel`
 
 We bind buttons to use the `Commands` from our `FlyWheel`
@@ -683,7 +692,7 @@ public class RobotContainer {
    * joysticks}.
    */
   private void configureBindings() {
-    
+  
 <strong>    // Schedule `run` when the Xbox controller's B button is pressed,
 </strong><strong>    // cancelling on release.
 </strong><strong>    m_driverController.a().whileTrue(m_exampleSubsystem.run(RPM.of(60)));
@@ -707,9 +716,11 @@ public class RobotContainer {
 }
 
 </code></pre>
+
 {% endstep %}
 
 {% step %}
+
 ### Simulate our FlyWheel!
 
 We can use our `FlyWheel` in simulation, with the exact same code that will control the real robot!
@@ -728,7 +739,7 @@ Press **Teleoperated** in **Robot State** then you can use your controller like 
 
 <figure><img src="../.gitbook/assets/Robot Simulation 2025-09-09 09-05-32.gif" alt=""><figcaption></figcaption></figure>
 
-Congratulations on successfully programming your Shooter!! :tada::tada:
+Congratulations on successfully programming your Shooter!! 🎉️🎉️
 {% endstep %}
 {% endstepper %}
 
