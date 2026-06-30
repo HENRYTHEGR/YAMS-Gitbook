@@ -21,9 +21,9 @@ This `Shooter` will be using the following hardware specs and control details
 
 * `SparkMax` controlling the `Shooter`
 * `12:1` GearBox on the `Shooter`
-* Pressing `A` will make the `fShooter` go to 60 RPM
+* Pressing `A` will make the `Shooter` go to 60 RPM
 * Pressing `B` will make the `Shooter` go to 300 RPM
-* Pressing `X` will make the `Shofoter` speed up.
+* Pressing `X` will make the `Shooter` speed up.
 * Pressing `Y` will make the `Shooter` slow down.
 
 ## Lets create a WPILib Command-Based Project!
@@ -76,7 +76,7 @@ Congratulations you have now installed YAMS! 🎉️
 
 We are going to start by configuring out motor controller.
 
-'''''''''<pre class="language-java" data-title="ExampleSubsystem.java" data-line-numbers data-full-width="true"><code class="lang-java">// Copyright (c) FIRST and other WPILib contributors.
+<pre class="language-java" data-title="ExampleSubsystem.java" data-line-numbers data-full-width="true"><code class="lang-java">// Copyright (c) FIRST and other WPILib contributors.
 // Open Source Software; you can modify and/or share it under the terms of
 // the WPILib BSD license file in the root directory of this project.
 
@@ -716,9 +716,7 @@ public class RobotContainer {
 }
 
 </code></pre>
-
 {% endstep %}
-
 {% step %}
 
 ### Simulate our FlyWheel!
